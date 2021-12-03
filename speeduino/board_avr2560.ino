@@ -89,8 +89,18 @@ void initBoard()
 
 }
 
-//#define MIN_FREE_MEMORY //Shows minimum available memory instead of current available memory
-#ifndef MIN_FREE_MEMORY
+#ifdef FREE_RAM_IS_MINIMUM
+
+/*
+  Returns how much memory has never been used (between heap and stack), ie the lowest amount of free memory.
+*/
+uint16_t freeRam()
+{
+  return StackCount();
+}
+
+#else
+
 /*
   Returns how much free dynamic memory exists (between heap and stack)
   This function is one big MISRA violation. MISRA advisories forbid directly poking at memory addresses, however there is no other way of determining heap size on embedded systems.
@@ -109,16 +119,7 @@ uint16_t freeRam()
     /* cppcheck-suppress misra-c2012-11.4 ; DEVIATION(D3) */
     return (uint16_t) &v - currentVal; //cppcheck-suppress misra-c2012-11.4
 }
-#else
 
-#include "src/stackmon/stackmon.h"
-/*
-  Returns how much memory has never been used (between heap and stack), ie the lowest amount of free memory.
-*/
-uint16_t freeRam()
-{
-  return StackCount();
-}
 #endif
 
 void doSystemReset() { return; }

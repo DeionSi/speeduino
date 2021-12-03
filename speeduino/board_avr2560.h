@@ -22,6 +22,9 @@
     typedef int eeprom_address_t;
   #endif
   #define RTC_LIB_H <TimeLib.h>
+  #ifdef FREE_RAM_IS_MINIMUM
+    #include "src/stackmon/stackmon.h"
+  #endif
   void initBoard();
   uint16_t freeRam();
   void doSystemReset();

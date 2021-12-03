@@ -43,6 +43,10 @@
   #define INJ_CHANNELS 4
   #define IGN_CHANNELS 5
 
+  /* Shows minimum available memory instead of current available memory
+   * This is useful in determining how big the stack gets. */
+  //#define FREE_RAM_IS_MINIMUM 
+
   #if defined(__AVR_ATmega2561__)
     //This is a workaround to avoid having to change all the references to higher ADC channels. We simply define the channels (Which don't exist on the 2561) as being the same as A0-A7
     //These Analog inputs should never be used on any 2561 board defintion (Because they don't exist on the MCU), so it will not cause any isses
