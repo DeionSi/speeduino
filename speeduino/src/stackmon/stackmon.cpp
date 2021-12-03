@@ -34,11 +34,13 @@
  **************************************************************************/
 
 /** Gain access to linker symbol for end of variable section.
- * This symbol is defined to be the address of the first unused byte of SRAM.
+ * __brkval is the boundary address between heap and stack.
+ * if __brkval is unset, __heap_start is the boundary and is used instead.
  * The stack is by convention at the top of the SRAM, growing down towards
- * the address at which this variable resides.
+ * the address at which these variable resides.
  */
-extern uint8_t _end;
+extern uint8_t *__brkval;
+extern uint8_t *__heap_start;
 
 /** Gain access to linker symbol for base of the stack.
  * This symbol is defined to be the address at the bootom of the stack.
@@ -104,7 +106,7 @@ void __attribute__ ((naked, section (".init1"), used)) StackPaint(void)
  */
 uint16_t StackCount(void)
 {
-    const uint8_t *p = &_end;
+    const uint8_t *p = (__brkval == 0 ? (uint8_t *) &__heap_start : __brkval);
     uint16_t       c = 0;
 
     while(*p == STACK_CANARY && p <= &__stack)
