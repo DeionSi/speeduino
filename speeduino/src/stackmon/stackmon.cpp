@@ -53,20 +53,19 @@ extern uint8_t __stack;
  * Local Functions
  **************************************************************************/
 
-void StackPaint(void) __attribute__ ((naked)) __attribute__ ((section (".init1")));
-
 /** Fill the stack space with a known pattern.
  * This fills all stack bytes with the 'canary' pattern to allow stack usage
  * to be later estimated.  This runs in the .init1 section, before normal
  * stack initialisation and unfortunately before __zero_reg__ has been
  * setup.  The C code is therefore replaced with inline assembly to ensure
  * the zero reg is not used by compiled code.
+ * Attributes used is required otherwise the LTO removes the function.
  *
  * \note This relies on the linker defining \a _end and \a __stack to define
  *        the bottom of the stack (\a __stack) and the top most address
  *        (\a _end).
  */
-void StackPaint(void)
+void __attribute__ ((naked, section (".init1"), used)) StackPaint(void)
 {
 #if 0
     uint8_t *p = &_end;
