@@ -1,3 +1,6 @@
+#ifdef CORE_AVR
+#ifdef FREE_RAM_IS_MINIMUM
+
 /***************************************************************************
  * stackmon.c: Stack usage monitoring for ATmega88/168.
  * Michael C McTernan, Michael.McTernan.2001@cs.bris.ac.uk
@@ -117,5 +120,8 @@ uint16_t StackCount(void)
 
     return c;
 }
+
+#endif // FREE_RAM_IS_MINIMUM
+#endif // CORE_AVR
 
 /* END OF FILE */
