@@ -4435,4 +4435,121 @@ void triggerSetEndTeeth_NGC()
 
   lastToothCalcAdvance = currentStatus.advance;
 }
+
+struct TriggerEdge {
+  uint16_t degree;
+  uint16_t length;
+};
+
+TriggerEdge Teeth[20];
+byte TeethIndex;
+byte TeethSize;
+uint16_t toothLastLength;
+
+void triggerSetup_UniversalDecoder()
+{
+  /*if (ToothOne == nullptr) { // Only allocate memory once
+    ToothOne = new TriggerEdge;
+    TriggerEdge * ToothTwo = new TriggerEdge;
+    ToothOne->degree = 0;
+    ToothTwo->degree = 180;
+    ToothOne->length = 180;
+    ToothTwo->length = 180;
+    ToothOne->next = ToothOne;
+    ToothTwo->next = ToothTwo;
+  }*/
+  TeethSize = 3;
+  Teeth[0].degree = 0;
+  Teeth[0].length = 90;
+  Teeth[1].degree = 90;
+  Teeth[1].length = 90;
+  Teeth[2].degree = 180;
+  Teeth[2].length = 180;
+
+  decoderIsSequential = false;
+  secondDerivEnabled = false;
+
+  toothLastToothTime = 0;
+  toothLastLength = 0;
+  toothCurrentCount = 0;
+  lastGap = 0;
+
+  toothOneTime = 0;
+  toothOneMinusOneTime = 0;
+  /*
+
+  //Primary trigger
+  configPage4.triggerTeeth = 36; //The number of teeth on the wheel incl missing teeth.
+  triggerToothAngle = 10; //The number of degrees that passes from tooth to tooth
+  triggerFilterTime = (int)(1000000 / (MAX_RPM / 60 * 36)); //Trigger filter time is the shortest possible time (in uS) that there can be between crank teeth (ie at max RPM). Any pulses that occur faster than this time will be disgarded as noise
+  toothLastMinusOneToothTime = 0;
+  toothLastToothRisingTime = 0;
+  MAX_STALL_TIME = (3333UL * triggerToothAngle * 2 ); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
+
+  //Secondary trigger
+  triggerSecFilterTime = (1000000 / MAX_RPM * 60 / (360 / 36) / 2); //Two nearest edges are 36 degrees apart. Divide by 2 for cam speed.
+  secondaryToothCount = 0;
+  toothLastSecToothRisingTime = 0;
+  toothLastSecToothTime = 0;
+  toothLastMinusOneSecToothTime = 0;*/
+}
+
+void triggerPri_UniversalDecoder() {
+  unsigned long curTime = micros();
+  lastGap = curTime - toothLastToothTime;
+  toothLastToothTime = curTime;
+
+  toothCurrentCount++;
+  if (toothCurrentCount > TeethSize) {
+    toothCurrentCount = 1;
+    currentStatus.hasSync = true;
+    currentStatus.startRevolutions++;
+  }
+  
+  if (toothCurrentCount == 1) {
+    toothLastLength = Teeth[TeethSize-1].length;
+
+    toothOneMinusOneTime = toothOneTime;
+    toothOneTime = curTime;
+  }
+  else {
+    toothLastLength = Teeth[toothCurrentCount-1].length;
+  }
+}
+
+uint16_t getRPM_UniversalDecoder()
+{
+  return stdGetRPM(360);
+}
+
+int getCrankAngle_UniversalDecoder()
+{
+  unsigned long curTime = micros();
+  lastCrankAngleCalc = curTime;
+
+  //Grab some variables that are used in the trigger code and assign them to temp variables.
+  noInterrupts();
+  int tempToothCurrentCount = toothCurrentCount;
+  unsigned long tempToothLastToothTime = toothLastToothTime;
+  unsigned long tempLastGap = lastGap;
+  uint16_t tempToothLastLength = toothLastLength;
+  interrupts();
+
+  //Estimate the number of degrees travelled since the last tooth}
+  elapsedTime = (curTime - tempToothLastToothTime); //The time passed since the last tooth
+  int crankAngle = Teeth[tempToothCurrentCount-1].degree; // Degree at the last seen tooth
+
+  crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
+
+  if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
+  if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
+
+  return crankAngle;
+}
+
+void triggerSetEndTeeth_UniversalDecoder()
+{
+  lastToothCalcAdvance = currentStatus.advance;
+}
+
 /** @} */
