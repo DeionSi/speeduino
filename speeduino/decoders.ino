@@ -4455,10 +4455,10 @@ enum SyncMethod {
 void triggerSetup_UniversalDecoder()
 {
   gapSize = 2;
-  TriggerGaps[0].amount = 6;
-  TriggerGaps[0].lengthDegrees = 45;
-  TriggerGaps[1].amount = 1;
-  TriggerGaps[1].lengthDegrees = 90;
+  TriggerGaps[0].amount = 1;
+  TriggerGaps[0].lengthDegrees = 90;
+  TriggerGaps[1].amount = 6;
+  TriggerGaps[1].lengthDegrees = 45;
   syncMethod = MISSING_TOOTH;
 
   // Set startAngle and nextRatioToThis based on amount and lengthDegrees
@@ -4482,7 +4482,7 @@ void triggerSetup_UniversalDecoder()
 
   toothLastToothTime = 0;
   gapLastLength = 0;
-  toothCurrentCount = 0;
+  toothCurrentCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder
   lastGap = 0;
   gapCurrent = 0;
 
@@ -4536,7 +4536,7 @@ void triggerPri_UniversalDecoder() {
       currentStatus.startRevolutions = 0;
       toothOneMinusOneTime = 0;
       toothOneTime = 0;
-      toothCurrentCount = 0;
+      toothCurrentCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder
     }
 
     //--------------- Incrementing --------------------
