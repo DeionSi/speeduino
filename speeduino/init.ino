@@ -3217,6 +3217,18 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
+    case DECODER_UNIVERSAL:
+      //Chrysler NGC 4 cylinder
+      triggerSetup_UniversalDecoder();
+      triggerHandler = triggerPri_UniversalDecoder;
+      getRPM = getRPM_UniversalDecoder;
+      getCrankAngle = getCrankAngle_UniversalDecoder;
+      triggerSetEndTeeth = triggerSetEndTeeth_UniversalDecoder;
+
+      primaryTriggerEdge = FALLING;
+      attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
+      break;
+
     default:
       triggerHandler = triggerPri_missingTooth;
       getRPM = getRPM_missingTooth;

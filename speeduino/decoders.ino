@@ -4436,43 +4436,49 @@ void triggerSetEndTeeth_NGC()
   lastToothCalcAdvance = currentStatus.advance;
 }
 
-struct TriggerEdge {
-  uint16_t degree;
-  uint16_t length;
-};
+struct TriggerGap {
+  uint8_t amount; // Amount of gaps in a repeating pattern
+  uint16_t startAngle; // Angle at start
+  uint16_t lengthDegrees; // Degrees per gap
+  uint8_t ratioToPrevious; // Relative size of this gap to the previous muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc // Divide by 8 instead to make calculations faster?
+} TriggerGaps[20];
 
-TriggerEdge Teeth[20];
-byte TeethIndex;
-byte TeethSize;
-uint16_t toothLastLength;
+byte gapSize;
+uint16_t gapLastLength;
+uint8_t gapCurrent;
+
+enum SyncMethod {
+  MISSING_TOOTH = 0
+} syncMethod;
 
 void triggerSetup_UniversalDecoder()
 {
-  /*if (ToothOne == nullptr) { // Only allocate memory once
-    ToothOne = new TriggerEdge;
-    TriggerEdge * ToothTwo = new TriggerEdge;
-    ToothOne->degree = 0;
-    ToothTwo->degree = 180;
-    ToothOne->length = 180;
-    ToothTwo->length = 180;
-    ToothOne->next = ToothOne;
-    ToothTwo->next = ToothTwo;
-  }*/
-  TeethSize = 3;
-  Teeth[0].degree = 0;
-  Teeth[0].length = 90;
-  Teeth[1].degree = 90;
-  Teeth[1].length = 90;
-  Teeth[2].degree = 180;
-  Teeth[2].length = 180;
+  gapSize = 2;
+  TriggerGaps[0].amount = 2;
+  TriggerGaps[0].lengthDegrees = 90;
+  TriggerGaps[1].amount = 1;
+  TriggerGaps[1].lengthDegrees = 180;
+  syncMethod = MISSING_TOOTH;
+
+  // Set startAngle and ratioToPrevious based on amount and lengthDegrees
+  uint16_t angle = 0;
+  for (int i = 0; i < gapSize; i++) {
+    uint8_t previous = (i == 0) ? gapSize-1 : i-1;
+    TriggerGaps[i].ratioToPrevious = (TriggerGaps[previous].lengthDegrees * 10) / TriggerGaps[i].lengthDegrees;
+    if (i == 0) { TriggerGaps[i].startAngle = 0; }
+    else { TriggerGaps[i].startAngle = TriggerGaps[previous].startAngle + (TriggerGaps[previous].lengthDegrees * TriggerGaps[previous].amount); }
+    angle += TriggerGaps[i].lengthDegrees * TriggerGaps[i].amount;
+  }
+  if (angle != 360) { currentStatus.syncLossCounter += 100; }
 
   decoderIsSequential = false;
   secondDerivEnabled = false;
 
   toothLastToothTime = 0;
-  toothLastLength = 0;
+  gapLastLength = 0;
   toothCurrentCount = 0;
   lastGap = 0;
+  gapCurrent = 0;
 
   toothOneTime = 0;
   toothOneMinusOneTime = 0;
@@ -4496,25 +4502,31 @@ void triggerSetup_UniversalDecoder()
 
 void triggerPri_UniversalDecoder() {
   unsigned long curTime = micros();
-  lastGap = curTime - toothLastToothTime;
-  toothLastToothTime = curTime;
 
-  toothCurrentCount++;
-  if (toothCurrentCount > TeethSize) {
-    toothCurrentCount = 1;
-    currentStatus.hasSync = true;
-    currentStatus.startRevolutions++;
+  if (lastGap > 0) { // Only count teeth when we can check them
+
+    //gapCurrent is the current gap in TriggerGaps (one TriggerGaps can contain multiple gaps) and toothCurrentCount is the current gap in one TriggerGap.
+    toothCurrentCount++;
+    if (toothCurrentCount >= TriggerGaps[gapCurrent].amount) {
+      toothCurrentCount = 0;
+
+      gapLastLength = TriggerGaps[gapCurrent].lengthDegrees;
+
+      gapCurrent++;
+      if (gapCurrent >= gapSize) {
+        // We get here when the last gap has been seen
+        gapCurrent = 0;
+        currentStatus.hasSync = true;
+        currentStatus.startRevolutions++;
+        toothOneMinusOneTime = toothOneTime;
+        toothOneTime = curTime;
+      }
+
+    }
   }
   
-  if (toothCurrentCount == 1) {
-    toothLastLength = Teeth[TeethSize-1].length;
-
-    toothOneMinusOneTime = toothOneTime;
-    toothOneTime = curTime;
-  }
-  else {
-    toothLastLength = Teeth[toothCurrentCount-1].length;
-  }
+  if (toothLastToothTime > 0) { lastGap = curTime - toothLastToothTime; }
+  toothLastToothTime = curTime;
 }
 
 uint16_t getRPM_UniversalDecoder()
@@ -4532,12 +4544,13 @@ int getCrankAngle_UniversalDecoder()
   int tempToothCurrentCount = toothCurrentCount;
   unsigned long tempToothLastToothTime = toothLastToothTime;
   unsigned long tempLastGap = lastGap;
-  uint16_t tempToothLastLength = toothLastLength;
+  uint16_t tempToothLastLength = gapLastLength;
+  uint8_t tempGapCurrent = gapCurrent;
   interrupts();
 
   //Estimate the number of degrees travelled since the last tooth}
   elapsedTime = (curTime - tempToothLastToothTime); //The time passed since the last tooth
-  int crankAngle = Teeth[tempToothCurrentCount-1].degree; // Degree at the last seen tooth
+  int crankAngle = TriggerGaps[tempGapCurrent].startAngle + (tempToothCurrentCount * TriggerGaps[tempGapCurrent].lengthDegrees); // Degree at the last seen tooth
 
   crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
 
