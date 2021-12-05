@@ -35,6 +35,7 @@
 #define DECODER_DRZ400            21
 #define DECODER_NGC               22
 #define DECODER_VMAX              23
+#define DECODER_UNIVERSAL_EVEN_SPACED_TEETH 24
 
 //This isn't to to filter out wrong pulses on triggers, but just to smooth out the cam angle reading for better closed loop VVT control.
 #define ANGLE_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
@@ -204,6 +205,22 @@ void triggerSec_NGC4();
 void triggerSec_NGC68();
 uint16_t getRPM_NGC();
 void triggerSetEndTeeth_NGC();
+
+typedef void (*voidFunction)();
+void triggerSetup_UniversalDecoder_Reset();
+voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder();
+void triggerSetup_UniversalDecoder_SecondaryDecoder();
+void triggerSec_UniversalDecoder();
+uint16_t getRPM_UniversalDecoder();
+int getCrankAngle_UniversalDecoder();
+void triggerSetEndTeeth_UniversalDecoder();
+
+struct TriggerGapGroup {
+  uint8_t count; // Count of gaps in a repeating pattern
+  uint16_t startAngle; // Angle at start
+  uint16_t lengthDegrees; // Degrees per gap
+  uint8_t ratioToPrevious; // Relative size of this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
+};
 
 extern void (*triggerHandler)(); //Pointer for the trigger function (Gets pointed to the relevant decoder)
 extern void (*triggerSecondaryHandler)(); //Pointer for the secondary trigger function (Gets pointed to the relevant decoder)

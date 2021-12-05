@@ -3351,6 +3351,22 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt, triggerHandler, CHANGE); //Hardcoded change, the primaryTriggerEdge will be used in the decoder to select if it`s an inverted or non-inverted signal.
       break;
 
+    case DECODER_UNIVERSAL_EVEN_SPACED_TEETH:
+      triggerHandler = triggerSetup_UniversalDecoder_PrimaryDecoder(); //Configures the primary decoder and returns the appropriate trigger handler
+      triggerSetup_UniversalDecoder_SecondaryDecoder(); //Configures the secondary decoder
+      triggerSetup_UniversalDecoder_Reset();
+      triggerSecondaryHandler = triggerSec_UniversalDecoder;
+      getRPM = getRPM_UniversalDecoder;
+      getCrankAngle = getCrankAngle_UniversalDecoder;
+      triggerSetEndTeeth = triggerSetEndTeeth_UniversalDecoder;
+
+      primaryTriggerEdge = FALLING;
+      secondaryTriggerEdge = FALLING;
+
+      attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
+      attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
+      break;
+
     default:
       triggerHandler = triggerPri_missingTooth;
       getRPM = getRPM_missingTooth;
