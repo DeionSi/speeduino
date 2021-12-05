@@ -3218,7 +3218,6 @@ void initialiseTriggers()
       break;
 
     case DECODER_UNIVERSAL:
-      //Chrysler NGC 4 cylinder
       triggerSetup_UniversalDecoder();
       triggerHandler = triggerPri_UniversalDecoder;
       getRPM = getRPM_UniversalDecoder;

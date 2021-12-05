@@ -199,6 +199,7 @@ void triggerSetEndTeeth_NGC();
 void triggerSetup_UniversalDecoder();
 void triggerPri_UniversalDecoder();
 uint16_t getRPM_UniversalDecoder();
+int getCrankAngle_UniversalDecoder();
 void triggerSetEndTeeth_UniversalDecoder();
 
 extern void (*triggerHandler)(); //Pointer for the trigger function (Gets pointed to the relevant decoder)

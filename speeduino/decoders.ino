@@ -4440,12 +4440,13 @@ struct TriggerGap {
   uint8_t amount; // Amount of gaps in a repeating pattern
   uint16_t startAngle; // Angle at start
   uint16_t lengthDegrees; // Degrees per gap
-  uint8_t ratioToPrevious; // Relative size of this gap to the previous muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc // Divide by 8 instead to make calculations faster?
+  uint8_t nextRatioToThis; // Relative size of the next gap to this gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc // Divide by 8 instead to make calculations faster?
 } TriggerGaps[20];
 
 byte gapSize;
 uint16_t gapLastLength;
 uint8_t gapCurrent;
+const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
 
 enum SyncMethod {
   MISSING_TOOTH = 0
@@ -4460,13 +4461,18 @@ void triggerSetup_UniversalDecoder()
   TriggerGaps[1].lengthDegrees = 180;
   syncMethod = MISSING_TOOTH;
 
-  // Set startAngle and ratioToPrevious based on amount and lengthDegrees
+  // Set startAngle and nextRatioToThis based on amount and lengthDegrees
   uint16_t angle = 0;
   for (int i = 0; i < gapSize; i++) {
+
     uint8_t previous = (i == 0) ? gapSize-1 : i-1;
-    TriggerGaps[i].ratioToPrevious = (TriggerGaps[previous].lengthDegrees * 10) / TriggerGaps[i].lengthDegrees;
+    uint8_t next = (i+1 == gapSize) ? 0 : i+1;
+
+    TriggerGaps[i].nextRatioToThis = (TriggerGaps[next].lengthDegrees * 10) / TriggerGaps[i].lengthDegrees;
+
     if (i == 0) { TriggerGaps[i].startAngle = 0; }
     else { TriggerGaps[i].startAngle = TriggerGaps[previous].startAngle + (TriggerGaps[previous].lengthDegrees * TriggerGaps[previous].amount); }
+
     angle += TriggerGaps[i].lengthDegrees * TriggerGaps[i].amount;
   }
   if (angle != 360) { currentStatus.syncLossCounter += 100; }
@@ -4502,8 +4508,33 @@ void triggerSetup_UniversalDecoder()
 
 void triggerPri_UniversalDecoder() {
   unsigned long curTime = micros();
+  unsigned long curGap = curTime - toothLastToothTime;
 
-  if (lastGap > 0) { // Only count teeth when we can check them
+  if (lastGap > 0 && curGap > 0) { // Only count teeth when we can check them
+
+    //Set the gap checking boundaries based on the expected width of the gap
+    int16_t targetGapAllowance;
+    if (toothCurrentCount == TriggerGaps[gapCurrent].amount) { //The last trigger was the last of that series, look for extended gap
+      targetGapAllowance = TriggerGaps[gapCurrent].nextRatioToThis * gapCheckAllowance / 10;
+    }
+    else if (toothCurrentCount == 0) { //We're on a new TriggerGap so get the allowance
+      targetGapAllowance = gapCheckAllowance;
+    }
+
+    int16_t targetGapDifference = ( (lastGap * 100) / curGap) - 100;
+    targetGapDifference = abs(targetGapDifference);
+    
+    if (targetGapDifference > targetGapAllowance) {
+      //if (currentStatus.hasSync == true) {
+        currentStatus.syncLossCounter++;
+        currentStatus.hasSync = false;
+      //}
+      gapCurrent = 0;
+      currentStatus.startRevolutions = 0;
+      toothOneMinusOneTime = 0;
+      toothOneTime = 0;
+      toothCurrentCount = 0;
+    }
 
     //gapCurrent is the current gap in TriggerGaps (one TriggerGaps can contain multiple gaps) and toothCurrentCount is the current gap in one TriggerGap.
     toothCurrentCount++;
@@ -4521,8 +4552,8 @@ void triggerPri_UniversalDecoder() {
         toothOneMinusOneTime = toothOneTime;
         toothOneTime = curTime;
       }
-
     }
+
   }
   
   if (toothLastToothTime > 0) { lastGap = curTime - toothLastToothTime; }
