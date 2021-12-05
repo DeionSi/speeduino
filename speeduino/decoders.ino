@@ -4455,10 +4455,10 @@ enum SyncMethod {
 void triggerSetup_UniversalDecoder()
 {
   gapSize = 2;
-  TriggerGaps[0].amount = 2;
-  TriggerGaps[0].lengthDegrees = 90;
+  TriggerGaps[0].amount = 6;
+  TriggerGaps[0].lengthDegrees = 45;
   TriggerGaps[1].amount = 1;
-  TriggerGaps[1].lengthDegrees = 180;
+  TriggerGaps[1].lengthDegrees = 90;
   syncMethod = MISSING_TOOTH;
 
   // Set startAngle and nextRatioToThis based on amount and lengthDegrees
@@ -4506,35 +4506,40 @@ void triggerSetup_UniversalDecoder()
   toothLastMinusOneSecToothTime = 0;*/
 }
 
+#include <auxiliaries.h>
+
 void triggerPri_UniversalDecoder() {
   unsigned long curTime = micros();
-  unsigned long curGap = curTime - toothLastToothTime;
 
-  if (lastGap > 0 && curGap > 0) { // Only count teeth when we can check them
+  if (lastGap > 0) { // Only count teeth when we can check them
+
+    //--------------- Gap checking / syncing --------------------
+
+    unsigned long curGap = curTime - toothLastToothTime;
 
     //Set the gap checking boundaries based on the expected width of the gap
-    int16_t targetGapAllowance;
-    if (toothCurrentCount == TriggerGaps[gapCurrent].amount) { //The last trigger was the last of that series, look for extended gap
-      targetGapAllowance = TriggerGaps[gapCurrent].nextRatioToThis * gapCheckAllowance / 10;
-    }
-    else if (toothCurrentCount == 0) { //We're on a new TriggerGap so get the allowance
-      targetGapAllowance = gapCheckAllowance;
+    uint16_t ratio = 100; // Default, ie the same gap as before
+    if ((int16_t)toothCurrentCount == TriggerGaps[gapCurrent].amount-1) { //The last trigger was the last of that series, look for extended gap
+      ratio = (uint16_t)(TriggerGaps[gapCurrent].nextRatioToThis * 10);
     }
 
-    int16_t targetGapDifference = ( (lastGap * 100) / curGap) - 100;
+    int16_t targetGapDifference = ( (curGap * 100) / lastGap) - ratio;
+
     targetGapDifference = abs(targetGapDifference);
     
-    if (targetGapDifference > targetGapAllowance) {
-      //if (currentStatus.hasSync == true) {
+    if (targetGapDifference > gapCheckAllowance) {
+      if (currentStatus.hasSync == true) {
         currentStatus.syncLossCounter++;
         currentStatus.hasSync = false;
-      //}
+      }
       gapCurrent = 0;
       currentStatus.startRevolutions = 0;
       toothOneMinusOneTime = 0;
       toothOneTime = 0;
       toothCurrentCount = 0;
     }
+
+    //--------------- Incrementing --------------------
 
     //gapCurrent is the current gap in TriggerGaps (one TriggerGaps can contain multiple gaps) and toothCurrentCount is the current gap in one TriggerGap.
     toothCurrentCount++;
@@ -4551,6 +4556,7 @@ void triggerPri_UniversalDecoder() {
         currentStatus.startRevolutions++;
         toothOneMinusOneTime = toothOneTime;
         toothOneTime = curTime;
+        FAN_ON();
       }
     }
 
@@ -4562,6 +4568,7 @@ void triggerPri_UniversalDecoder() {
 
 uint16_t getRPM_UniversalDecoder()
 {
+  FAN_OFF();
   return stdGetRPM(360);
 }
 
