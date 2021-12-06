@@ -4450,7 +4450,7 @@ struct TriggerGap {
   uint8_t count; // Count of gaps in a repeating pattern
   uint16_t startAngle; // Angle at start
   uint16_t lengthDegrees; // Degrees per gap
-  uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc // Divide by 8 instead to make calculations faster?
+  uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
 } TriggerGaps[20];
 
 byte gapSize;
@@ -4503,7 +4503,7 @@ void triggerSetup_UniversalDecoder()
 
   toothLastToothTime = 0;
   gapLastLength = 0;
-  toothCurrentCount = 0; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder
+  toothCurrentCount = 0;
   lastGap = 0;
   gapCurrent = 0;
 
@@ -4548,7 +4548,7 @@ void triggerPri_UniversalDecoder() {
       currentStatus.startRevolutions = 0;
       toothOneMinusOneTime = 0;
       toothOneTime = 0;
-      toothCurrentCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder
+      toothCurrentCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
     }
 
     //--------------- Incrementing --------------------
@@ -4603,7 +4603,7 @@ int getCrankAngle_UniversalDecoder()
 
   //Estimate the number of degrees travelled since the last tooth}
   elapsedTime = (curTime - tempToothLastToothTime); //The time passed since the last tooth
-  int crankAngle = TriggerGaps[tempGapCurrent].startAngle + (tempToothCurrentCount * TriggerGaps[tempGapCurrent].lengthDegrees); // Degree at the last seen tooth
+  int crankAngle = configPage4.triggerAngle + TriggerGaps[tempGapCurrent].startAngle + (tempToothCurrentCount * TriggerGaps[tempGapCurrent].lengthDegrees); // Degree at the last seen tooth
 
   crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
 
