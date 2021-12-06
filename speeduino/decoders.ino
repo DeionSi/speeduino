@@ -4438,12 +4438,16 @@ void triggerSetEndTeeth_NGC()
 
 /* TODO:
  * Repetition - DONE
- * Cam
+ * Secondary input
  * Sequential
  * New Ignition Mode
- * Uneven teeth
+ * Teeth at decimal degrees
  * Sync by cam
- * Quicker sync (requires a full rotation after finding tooth #1 currently)
+ * Filter
+ * Quicker sync (requires a full rotation after finding tooth #1 currently) (should be possible by having a variable saying that once a specific gap/tooth has been reached sync can be attained)
+ * Tertriary input
+ * Test
+ * Test for making sure TriggerGaps is big enough and not bigger than necessary
  */
 
 struct TriggerGap {
@@ -4451,16 +4455,18 @@ struct TriggerGap {
   uint16_t startAngle; // Angle at start
   uint16_t lengthDegrees; // Degrees per gap
   uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
-} TriggerGaps[20];
+} TriggerGaps[20]; //Crank is stored from the front. Cam is stored from the back.
+
 
 byte gapSize;
 volatile uint16_t gapLastLength;
 volatile uint8_t gapCurrent;
 const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
 
-enum SyncMethod {
-  GAP_CHECK_CRANK = 0
-} syncMethod;
+enum UniversalDecoderOptions {
+  CAM_IDENTIFIES_CRANK_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM
+  CAM_OVERRIDES_CRANK_POSITION = 2
+} universalDecoderOptions;
 
 void triggerSetup_UniversalDecoder()
 {
@@ -4481,7 +4487,6 @@ void triggerSetup_UniversalDecoder()
   TriggerGaps[3].lengthDegrees = 30;
   TriggerGaps[4].count = 12;
   TriggerGaps[4].lengthDegrees = 10;*/
-  syncMethod = GAP_CHECK_CRANK;
 
   // Set startAngle and ratioToPrevious based on count and lengthDegrees
   uint16_t angle = 0;
@@ -4536,13 +4541,12 @@ void triggerPri_UniversalDecoder() {
     else { ratio = 100; } // Default, ie the same gap as before
 
     int16_t targetGapDifference = ( (lastGap * 100) / curGap) - ratio;
-
     targetGapDifference = abs(targetGapDifference);
     
     if (targetGapDifference > gapCheckAllowance) {
       if (currentStatus.hasSync == true) {
-        currentStatus.syncLossCounter++;
         currentStatus.hasSync = false;
+        currentStatus.syncLossCounter++;
       }
       gapCurrent = 0;
       currentStatus.startRevolutions = 0;
