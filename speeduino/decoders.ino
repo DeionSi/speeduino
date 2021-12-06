@@ -4476,17 +4476,15 @@ void triggerSetup_UniversalDecoder()
   TriggerGaps[1].count = 1;
   TriggerGaps[1].lengthDegrees = 90;
 
-  /*gapSize = 5;
+  /*gapSize = 4;
   TriggerGaps[0].count = 1;
   TriggerGaps[0].lengthDegrees = 30;
   TriggerGaps[1].count = 15;
   TriggerGaps[1].lengthDegrees = 10;
-  TriggerGaps[2].count = 1;
+  TriggerGaps[2].count = 2;
   TriggerGaps[2].lengthDegrees = 30;
-  TriggerGaps[3].count = 1;
-  TriggerGaps[3].lengthDegrees = 30;
-  TriggerGaps[4].count = 12;
-  TriggerGaps[4].lengthDegrees = 10;*/
+  TriggerGaps[3].count = 12;
+  TriggerGaps[3].lengthDegrees = 10;*/
 
   // Set startAngle and ratioToPrevious based on count and lengthDegrees
   uint16_t angle = 0;
