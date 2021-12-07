@@ -4476,7 +4476,8 @@ const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
 byte gapSizeSec;
 volatile unsigned long lastGapSec;
 volatile uint8_t gapCurrentSec;
-volatile bool secondaryHasSynced;
+volatile bool secondaryHasSync;
+volatile bool secondaryHasPassedToothOne;
 
 enum UniversalDecoderOptions {
   CAM_IDENTIFIES_CRANK_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM
@@ -4541,8 +4542,8 @@ void triggerSetup_UniversalDecoder()
   }
   if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 50; }
 
-  decoderIsSequential = false;
   secondDerivEnabled = false;
+  revolutionOne = false;
 
   toothLastToothTime = 0;
   gapLastLength = 0;
@@ -4557,7 +4558,8 @@ void triggerSetup_UniversalDecoder()
   gapCurrentSec = 0;
   lastGapSec = 0;
   secondaryToothCount = 0;
-  secondaryHasSynced = false;
+  secondaryHasSync = false;
+  secondaryHasPassedToothOne = false;
   /*
 
   //Primary trigger
@@ -4588,8 +4590,9 @@ void triggerPri_UniversalDecoder() {
     targetGapDifference = abs(targetGapDifference);
     
     if (targetGapDifference > gapCheckAllowance) {
-      if (currentStatus.hasSync == true) {
+      if (currentStatus.hasSync == true || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC);) {
         currentStatus.hasSync = false;
+        BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
         currentStatus.syncLossCounter++;
       }
       gapCurrent = 0;
@@ -4612,11 +4615,27 @@ void triggerPri_UniversalDecoder() {
       if (gapCurrent >= gapSize) {
         // We get here when the last gap has been seen
         gapCurrent = 0;
-        currentStatus.hasSync = true;
         currentStatus.startRevolutions++;
         toothOneMinusOneTime = toothOneTime;
         toothOneTime = curTime;
         FAN_ON();
+
+        if (secondaryHasPassedToothOne == true) { revolutionOne = true; secondaryHasPassedToothOne = false; }
+        else { revolutionOne = !revolutionOne; }
+
+        //if Sequential fuel or ignition is in use, further checks are needed before determining sync
+        if (configPage4.sparkMode == IGN_MODE_SEQUENTIAL || configPage2.injLayout == INJ_SEQUENTIAL) {
+
+          //If either fuel or ignition is sequential, only declare sync if the cam tooth has been seen OR if the missing wheel is on the cam
+          if (secondaryHasSync == true) {
+            currentStatus.hasSync = true;
+            BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); //the engine is fully synced so clear the Half Sync bit
+          }
+          else if(currentStatus.hasSync != true) { BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //If there is primary trigger but no secondary we only have half sync.
+
+        }
+        else { currentStatus.hasSync = true; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //If nothing is using sequential, we have sync and also clear half sync bit
+
       }
     }
 
@@ -4645,8 +4664,9 @@ void triggerSec_UniversalDecoder() {
     targetGapDifference = abs(targetGapDifference);
 
     if (targetGapDifference > gapCheckAllowance) {
-      if (secondaryHasSynced == true) {
-        secondaryHasSynced = false;
+      if (secondaryHasSync == true) {
+        secondaryHasSync = false;
+        secondaryHasPassedToothOne = false;
         currentStatus.syncLossCounter++;
       }
       gapCurrentSec = 0;
@@ -4664,7 +4684,8 @@ void triggerSec_UniversalDecoder() {
       if (gapCurrentSec >= gapSizeSec) {
         // We get here when the last gap has been seen
         gapCurrentSec = 0;
-        secondaryHasSynced = true;
+        secondaryHasSync = true;
+        secondaryHasPassedToothOne = true;
         FAN_ON();
       }
     }
@@ -4693,6 +4714,7 @@ int getCrankAngle_UniversalDecoder()
   unsigned long tempLastGap = lastGap;
   uint16_t tempToothLastLength = gapLastLength;
   uint8_t tempGapCurrent = gapCurrent;
+  bool tempRevolutionOne = revolutionOne;
   interrupts();
 
   // If we are at a TriggerGap repetition the previous gap is the same as the current gap
@@ -4704,6 +4726,9 @@ int getCrankAngle_UniversalDecoder()
 
   crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
 
+  if (tempRevolutionOne == true) { crankAngle += 360; }
+
+  if (crankAngle >= 720) { crankAngle -= 720; }
   if (crankAngle > CRANK_ANGLE_MAX) { crankAngle -= CRANK_ANGLE_MAX; }
   if (crankAngle < 0) { crankAngle += CRANK_ANGLE_MAX; }
 
