@@ -3217,8 +3217,10 @@ void initialiseTriggers()
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
-    case DECODER_UNIVERSAL:
+    case DECODER_UNIVERSAL_EVEN_SPACED_TEETH:
+      triggerSetup_UniversalDecoder_EvenSpacedTeeth();
       triggerSetup_UniversalDecoder();
+      
       triggerHandler = triggerPri_UniversalDecoder;
       triggerSecondaryHandler = triggerSec_UniversalDecoder;
       getRPM = getRPM_UniversalDecoder;

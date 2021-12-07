@@ -4442,7 +4442,7 @@ void triggerSetEndTeeth_NGC()
  * Sequential
  * New Ignition Mode
  * Teeth at decimal degrees
- * Sync by cam
+ * Sync by cam - DONE
  * Sync by polling cam
  * Filter
  * Quicker sync (requires a full rotation after finding tooth #1 currently) (should be possible by having a variable saying that once a specific gap/tooth has been reached sync can be attained)
@@ -4459,15 +4459,11 @@ void triggerSetEndTeeth_NGC()
  * namespaces?
  * More resolution for previous ratio
  * Higher RPM capability
+ * Automaticly calculate gapcheckallowance based on maximum gap length and max viable RPM change/s
  */
 
-struct TriggerGap {
-  uint8_t count; // Count of gaps in a repeating pattern
-  uint16_t startAngle; // Angle at start
-  uint16_t lengthDegrees; // Degrees per gap
-  uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
-} TriggerGaps[20], CamTriggerGaps[5]; //Crank is stored from the front. Cam is stored from the back.
-
+TriggerGap TriggerGaps[20]; //TODO: Crank is stored from the front. Cam is stored from the back.
+TriggerGap CamTriggerGaps[5];
 byte gapSize;
 volatile uint16_t gapLastLength;
 volatile uint8_t gapCurrent;
@@ -4480,27 +4476,49 @@ volatile bool secondaryHasSync;
 volatile bool secondaryHasPassedToothOne;
 
 enum UniversalDecoderOptions {
-  CAM_IDENTIFIES_CRANK_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM
-  CAM_OVERRIDES_CRANK_POSITION = 2
+  CAM_IDENTIFIES_CRANK_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM //Not implemented
+  CAM_OVERRIDES_CRANK_POSITION = 2, //Not implemented
+  CAM_POLLING = 4 //Not implemented
 } universalDecoderOptions;
 
-void triggerSetup_UniversalDecoder()
-{
+// This calculates and sets (caches) startAngle and ratioToPrevious based on count and lengthDegrees
+void universalDecoder_fillGapsArray(TriggerGap * gaps, byte size) {
+  uint16_t angle = 0;
+  for (int i = 0; i < size; i++) {
+
+    uint8_t previous = (i == 0) ? size-1 : i-1; //Figure out which gap was the previous one so we can compare against it
+    gaps[i].ratioToPrevious = (gaps[previous].lengthDegrees * 10) / gaps[i].lengthDegrees;
+
+    if (i == 0) { gaps[i].startAngle = 0; }
+    else { gaps[i].startAngle = gaps[previous].startAngle + (gaps[previous].lengthDegrees * gaps[previous].count); }
+
+    angle += gaps[i].lengthDegrees * gaps[i].count;
+  }
+
+  if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 100; } //TODO: Remove this for production
+}
+
+void triggerSetup_UniversalDecoder_EvenSpacedTeeth() {
+  //Assemble TriggerGaps
   gapSize = 1;
-  const byte teeth = 60;
-  const byte missing = 2;
-  TriggerGaps[0].lengthDegrees = 360/teeth;
-  TriggerGaps[0].count = teeth-missing;
-  if (missing > 0) {
+  TriggerGaps[0].lengthDegrees = 360/configPage4.triggerTeeth;
+  TriggerGaps[0].count = configPage4.triggerTeeth - configPage4.triggerMissingTeeth;
+  if (configPage4.triggerMissingTeeth > 0) {
     gapSize = 2;
     TriggerGaps[0].count--;
   }
-  TriggerGaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + missing);
+  TriggerGaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + configPage4.triggerMissingTeeth);
   TriggerGaps[1].count = 1;
 
+  universalDecoder_fillGapsArray(TriggerGaps, gapSize);
+}
+
+void triggerSetup_UniversalDecoder()
+{
   gapSizeSec = 1;
   CamTriggerGaps[0].count = 1;
   CamTriggerGaps[0].lengthDegrees = 720;
+  //universalDecoder_fillGapsArray(CamTriggerGaps, gapSizeSec);
 
   /*gapSize = 4;
   TriggerGaps[0].count = 1;
@@ -4511,36 +4529,6 @@ void triggerSetup_UniversalDecoder()
   TriggerGaps[2].lengthDegrees = 30;
   TriggerGaps[3].count = 12;
   TriggerGaps[3].lengthDegrees = 10;*/
-
-  // Set startAngle and ratioToPrevious based on count and lengthDegrees
-  uint16_t angle = 0;
-  for (int i = 0; i < gapSize; i++) {
-
-    uint8_t previous = (i == 0) ? gapSize-1 : i-1;
-
-    TriggerGaps[i].ratioToPrevious = (TriggerGaps[previous].lengthDegrees * 10) / TriggerGaps[i].lengthDegrees;
-
-    if (i == 0) { TriggerGaps[i].startAngle = 0; }
-    else { TriggerGaps[i].startAngle = TriggerGaps[previous].startAngle + (TriggerGaps[previous].lengthDegrees * TriggerGaps[previous].count); }
-
-    angle += TriggerGaps[i].lengthDegrees * TriggerGaps[i].count;
-  }
-  if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 100; }
-
-  // Set startAngle and ratioToPrevious based on count and lengthDegrees
-  angle = 0;
-  for (int i = 0; i < gapSizeSec; i++) {
-
-    uint8_t previous = (i == 0) ? gapSizeSec-1 : i-1;
-
-    CamTriggerGaps[i].ratioToPrevious = (CamTriggerGaps[previous].lengthDegrees * 10) / CamTriggerGaps[i].lengthDegrees;
-
-    if (i == 0) { CamTriggerGaps[i].startAngle = 0; }
-    else { CamTriggerGaps[i].startAngle = CamTriggerGaps[previous].startAngle + (CamTriggerGaps[previous].lengthDegrees * CamTriggerGaps[previous].count); }
-
-    angle += CamTriggerGaps[i].lengthDegrees * CamTriggerGaps[i].count;
-  }
-  if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 50; }
 
   secondDerivEnabled = false;
   revolutionOne = false;
@@ -4590,7 +4578,7 @@ void triggerPri_UniversalDecoder() {
     targetGapDifference = abs(targetGapDifference);
     
     if (targetGapDifference > gapCheckAllowance) {
-      if (currentStatus.hasSync == true || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC);) {
+      if (currentStatus.hasSync == true || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) {
         currentStatus.hasSync = false;
         BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
         currentStatus.syncLossCounter++;

@@ -34,7 +34,7 @@
 #define DECODER_ST170             20
 #define DECODER_DRZ400            21
 #define DECODER_NGC               22
-#define DECODER_UNIVERSAL         23
+#define DECODER_UNIVERSAL_EVEN_SPACED_TEETH 23
 
 //This isn't to to filter out wrong pulses on triggers, but just to smooth out the cam angle reading for better closed loop VVT control.
 #define ANGLE_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
@@ -197,6 +197,7 @@ uint16_t getRPM_NGC();
 void triggerSetEndTeeth_NGC();
 
 void triggerSetup_UniversalDecoder();
+void triggerSetup_UniversalDecoder_EvenSpacedTeeth();
 void triggerPri_UniversalDecoder();
 void triggerSec_UniversalDecoder();
 uint16_t getRPM_UniversalDecoder();
@@ -268,6 +269,13 @@ extern uint16_t ignition7EndTooth;
 extern uint16_t ignition8EndTooth;
 
 extern int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
+
+struct TriggerGap {
+  uint8_t count; // Count of gaps in a repeating pattern
+  uint16_t startAngle; // Angle at start
+  uint16_t lengthDegrees; // Degrees per gap
+  uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
+};
 
 //Used for identifying long and short pulses on the 4G63 (And possibly other) trigger patterns
 #define LONG 0;
