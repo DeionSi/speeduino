@@ -4438,16 +4438,27 @@ void triggerSetEndTeeth_NGC()
 
 /* TODO:
  * Repetition - DONE
- * Secondary input
+ * Secondary input - DONE
  * Sequential
  * New Ignition Mode
  * Teeth at decimal degrees
  * Sync by cam
+ * Sync by polling cam
  * Filter
  * Quicker sync (requires a full rotation after finding tooth #1 currently) (should be possible by having a variable saying that once a specific gap/tooth has been reached sync can be attained)
  * Tertriary input
- * Test
+ * Tests for decoder
  * Test for making sure TriggerGaps is big enough and not bigger than necessary
+ * Prevent overlap errors when TriggerGaps and CamTriggerGaps gap #1 are close to each other. (delay cam sync for X crank teeth setting?)
+ * cam tooth #1 and crank tooth #1 offset for VVT????
+ * set DecoderIsSequential based on selected pattern
+ * unionize triggergap arrays with other variables
+ * don't check every gap after sync
+ * Special handling for one tooth wheels (especially cam)
+ * better variable naming
+ * namespaces?
+ * More resolution for previous ratio
+ * Higher RPM capability
  */
 
 struct TriggerGap {
@@ -4455,13 +4466,17 @@ struct TriggerGap {
   uint16_t startAngle; // Angle at start
   uint16_t lengthDegrees; // Degrees per gap
   uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
-} TriggerGaps[20]; //Crank is stored from the front. Cam is stored from the back.
-
+} TriggerGaps[20], CamTriggerGaps[5]; //Crank is stored from the front. Cam is stored from the back.
 
 byte gapSize;
 volatile uint16_t gapLastLength;
 volatile uint8_t gapCurrent;
 const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
+
+byte gapSizeSec;
+volatile unsigned long lastGapSec;
+volatile uint8_t gapCurrentSec;
+volatile bool secondaryHasSynced;
 
 enum UniversalDecoderOptions {
   CAM_IDENTIFIES_CRANK_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM
@@ -4470,11 +4485,21 @@ enum UniversalDecoderOptions {
 
 void triggerSetup_UniversalDecoder()
 {
-  gapSize = 2;
-  TriggerGaps[0].count = 6;
-  TriggerGaps[0].lengthDegrees = 45;
+  gapSize = 1;
+  const byte teeth = 60;
+  const byte missing = 2;
+  TriggerGaps[0].lengthDegrees = 360/teeth;
+  TriggerGaps[0].count = teeth-missing;
+  if (missing > 0) {
+    gapSize = 2;
+    TriggerGaps[0].count--;
+  }
+  TriggerGaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + missing);
   TriggerGaps[1].count = 1;
-  TriggerGaps[1].lengthDegrees = 90;
+
+  gapSizeSec = 1;
+  CamTriggerGaps[0].count = 1;
+  CamTriggerGaps[0].lengthDegrees = 720;
 
   /*gapSize = 4;
   TriggerGaps[0].count = 1;
@@ -4499,7 +4524,22 @@ void triggerSetup_UniversalDecoder()
 
     angle += TriggerGaps[i].lengthDegrees * TriggerGaps[i].count;
   }
-  if (angle != 360) { currentStatus.syncLossCounter += 100; }
+  if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 100; }
+
+  // Set startAngle and ratioToPrevious based on count and lengthDegrees
+  angle = 0;
+  for (int i = 0; i < gapSizeSec; i++) {
+
+    uint8_t previous = (i == 0) ? gapSizeSec-1 : i-1;
+
+    CamTriggerGaps[i].ratioToPrevious = (CamTriggerGaps[previous].lengthDegrees * 10) / CamTriggerGaps[i].lengthDegrees;
+
+    if (i == 0) { CamTriggerGaps[i].startAngle = 0; }
+    else { CamTriggerGaps[i].startAngle = CamTriggerGaps[previous].startAngle + (CamTriggerGaps[previous].lengthDegrees * CamTriggerGaps[previous].count); }
+
+    angle += CamTriggerGaps[i].lengthDegrees * CamTriggerGaps[i].count;
+  }
+  if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 50; }
 
   decoderIsSequential = false;
   secondDerivEnabled = false;
@@ -4512,6 +4552,12 @@ void triggerSetup_UniversalDecoder()
 
   toothOneTime = 0;
   toothOneMinusOneTime = 0;
+
+  toothLastSecToothTime = 0;
+  gapCurrentSec = 0;
+  lastGapSec = 0;
+  secondaryToothCount = 0;
+  secondaryHasSynced = false;
   /*
 
   //Primary trigger
@@ -4578,6 +4624,55 @@ void triggerPri_UniversalDecoder() {
   
   if (toothLastToothTime > 0) { lastGap = curTime - toothLastToothTime; }
   toothLastToothTime = curTime;
+}
+
+
+void triggerSec_UniversalDecoder() {
+  unsigned long curTime = micros();
+
+  if (lastGapSec > 0) { // Only count teeth when we can check them
+
+    //--------------- Gap checking / syncing --------------------
+
+    unsigned long curGap = curTime - secondaryLastToothTime;
+
+    //Set the gap checking boundaries based on the expected width of the gap
+    uint16_t ratio; 
+    if (secondaryToothCount == 0) { ratio = (uint16_t)(CamTriggerGaps[gapCurrentSec].ratioToPrevious * 10); } //The first tooth in a CamTriggerGaps "group" has a different gap to the previous tooth
+    else { ratio = 100; } // Default, ie the same gap as before
+
+    int16_t targetGapDifference = ( (lastGapSec * 100) / curGap) - ratio;
+    targetGapDifference = abs(targetGapDifference);
+
+    if (targetGapDifference > gapCheckAllowance) {
+      if (secondaryHasSynced == true) {
+        secondaryHasSynced = false;
+        currentStatus.syncLossCounter++;
+      }
+      gapCurrentSec = 0;
+      secondaryToothCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
+    }
+
+    //--------------- Incrementing --------------------
+
+    //gapCurrentSec is the current gap in CamTriggerGaps (one CamTriggerGaps can contain multiple gaps) and secondaryToothCount is the current gap in one CamTriggerGap.
+    secondaryToothCount++;
+    if (secondaryToothCount >= CamTriggerGaps[gapCurrentSec].count) {
+      secondaryToothCount = 0;
+
+      gapCurrentSec++;
+      if (gapCurrentSec >= gapSizeSec) {
+        // We get here when the last gap has been seen
+        gapCurrentSec = 0;
+        secondaryHasSynced = true;
+        FAN_ON();
+      }
+    }
+
+  }
+  
+  if (secondaryLastToothTime > 0) { lastGapSec = curTime - secondaryLastToothTime; }
+  secondaryLastToothTime = curTime;
 }
 
 uint16_t getRPM_UniversalDecoder()

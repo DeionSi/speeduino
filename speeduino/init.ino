@@ -3220,12 +3220,15 @@ void initialiseTriggers()
     case DECODER_UNIVERSAL:
       triggerSetup_UniversalDecoder();
       triggerHandler = triggerPri_UniversalDecoder;
+      triggerSecondaryHandler = triggerSec_UniversalDecoder;
       getRPM = getRPM_UniversalDecoder;
       getCrankAngle = getCrankAngle_UniversalDecoder;
       triggerSetEndTeeth = triggerSetEndTeeth_UniversalDecoder;
 
       primaryTriggerEdge = FALLING;
+      secondaryTriggerEdge = FALLING;
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
+      attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
 
     default:

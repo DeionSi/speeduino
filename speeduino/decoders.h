@@ -198,6 +198,7 @@ void triggerSetEndTeeth_NGC();
 
 void triggerSetup_UniversalDecoder();
 void triggerPri_UniversalDecoder();
+void triggerSec_UniversalDecoder();
 uint16_t getRPM_UniversalDecoder();
 int getCrankAngle_UniversalDecoder();
 void triggerSetEndTeeth_UniversalDecoder();
