@@ -196,8 +196,9 @@ void triggerSec_NGC4();
 uint16_t getRPM_NGC();
 void triggerSetEndTeeth_NGC();
 
-void triggerSetup_UniversalDecoder();
-void triggerSetup_UniversalDecoder_EvenSpacedTeeth();
+void triggerSetup_UniversalDecoder_Reset();
+void triggerSetup_UniversalDecoder_PrimaryDecoder();
+void triggerSetup_UniversalDecoder_SecondaryDecoder();
 void triggerPri_UniversalDecoder();
 void triggerSec_UniversalDecoder();
 uint16_t getRPM_UniversalDecoder();

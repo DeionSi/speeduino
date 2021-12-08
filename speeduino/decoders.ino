@@ -4439,11 +4439,12 @@ void triggerSetEndTeeth_NGC()
 /* TODO:
  * Repetition - DONE
  * Secondary input - DONE
- * Sequential
- * New Ignition Mode
- * Teeth at decimal degrees
  * Sync by cam - DONE
- * Sync by polling cam
+ * Sync by polling cam - NOT NEEDED, SAME AS SYNC BY CAM
+ * * set DecoderIsSequential based on selected pattern - DecoderIsSequential is not used - NOT NEEDED
+ * Sequential - DONE
+ * New Ignition Mode
+ * Teeth at not integer degrees
  * Filter
  * Quicker sync (requires a full rotation after finding tooth #1 currently) (should be possible by having a variable saying that once a specific gap/tooth has been reached sync can be attained)
  * Tertriary input
@@ -4451,15 +4452,15 @@ void triggerSetEndTeeth_NGC()
  * Test for making sure TriggerGaps is big enough and not bigger than necessary
  * Prevent overlap errors when TriggerGaps and CamTriggerGaps gap #1 are close to each other. (delay cam sync for X crank teeth setting?)
  * cam tooth #1 and crank tooth #1 offset for VVT????
- * set DecoderIsSequential based on selected pattern
  * unionize triggergap arrays with other variables
  * don't check every gap after sync
- * Special handling for one tooth wheels (especially cam)
  * better variable naming
  * namespaces?
  * More resolution for previous ratio
  * Higher RPM capability
  * Automaticly calculate gapcheckallowance based on maximum gap length and max viable RPM change/s
+ * Don't check gaps for teeth with only evenly spaced teeth
+ * Verify very low RPM (cranking)
  */
 
 TriggerGap TriggerGaps[20]; //TODO: Crank is stored from the front. Cam is stored from the back.
@@ -4481,7 +4482,7 @@ enum UniversalDecoderOptions {
   CAM_POLLING = 4 //Not implemented
 } universalDecoderOptions;
 
-// This calculates and sets (caches) startAngle and ratioToPrevious based on count and lengthDegrees
+// Calculates and sets (caches) startAngle and ratioToPrevious based on count and lengthDegrees
 void universalDecoder_fillGapsArray(TriggerGap * gaps, byte size) {
   uint16_t angle = 0;
   for (int i = 0; i < size; i++) {
@@ -4498,38 +4499,42 @@ void universalDecoder_fillGapsArray(TriggerGap * gaps, byte size) {
   if (angle != 360 && angle != 720) { currentStatus.syncLossCounter += 100; } //TODO: Remove this for production
 }
 
-void triggerSetup_UniversalDecoder_EvenSpacedTeeth() {
-  //Assemble TriggerGaps
-  gapSize = 1;
-  TriggerGaps[0].lengthDegrees = 360/configPage4.triggerTeeth;
-  TriggerGaps[0].count = configPage4.triggerTeeth - configPage4.triggerMissingTeeth;
-  if (configPage4.triggerMissingTeeth > 0) {
-    gapSize = 2;
-    TriggerGaps[0].count--;
+// Patterns with only evenly spaced teeth (incl only one tooth) as well as one missing teeth gap
+void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGap * gaps, byte & size, byte teeth, byte missingTeeth, uint16_t degrees) {
+  size = 1;
+  gaps[0].lengthDegrees = degrees/teeth;
+  gaps[0].count = teeth - missingTeeth;
+  if (missingTeeth > 0) {
+    size = 2;
+    gaps[0].count--;
+    gaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + missingTeeth);
+    gaps[1].count = 1;
   }
-  TriggerGaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + configPage4.triggerMissingTeeth);
-  TriggerGaps[1].count = 1;
+}
 
+// Mazda 36-2-(2-2) crank
+void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGap * gaps, byte & size) {
+  size = 4;
+  gaps[0].count = 1;  gaps[0].lengthDegrees = 30;
+  gaps[1].count = 15; gaps[1].lengthDegrees = 10;
+  gaps[2].count = 2;  gaps[2].lengthDegrees = 30;
+  gaps[3].count = 12; gaps[3].lengthDegrees = 10;
+}
+
+// Set up the TriggerGaps array according to the selected primary trigger options
+void triggerSetup_UniversalDecoder_PrimaryDecoder() {
+  triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGaps, gapSize, configPage4.triggerTeeth, configPage4.triggerMissingTeeth, 360);
   universalDecoder_fillGapsArray(TriggerGaps, gapSize);
 }
 
-void triggerSetup_UniversalDecoder()
+// Set up the CamTriggerGaps array according to the selected secondary trigger options
+void triggerSetup_UniversalDecoder_SecondaryDecoder() {
+  triggerSetup_UniversalDecoder_EvenSpacedTeeth(CamTriggerGaps, gapSizeSec, 1, 0, 720); // One tooth cam
+  universalDecoder_fillGapsArray(CamTriggerGaps, gapSizeSec);
+}
+
+void triggerSetup_UniversalDecoder_Reset()
 {
-  gapSizeSec = 1;
-  CamTriggerGaps[0].count = 1;
-  CamTriggerGaps[0].lengthDegrees = 720;
-  //universalDecoder_fillGapsArray(CamTriggerGaps, gapSizeSec);
-
-  /*gapSize = 4;
-  TriggerGaps[0].count = 1;
-  TriggerGaps[0].lengthDegrees = 30;
-  TriggerGaps[1].count = 15;
-  TriggerGaps[1].lengthDegrees = 10;
-  TriggerGaps[2].count = 2;
-  TriggerGaps[2].lengthDegrees = 30;
-  TriggerGaps[3].count = 12;
-  TriggerGaps[3].lengthDegrees = 10;*/
-
   secondDerivEnabled = false;
   revolutionOne = false;
 
@@ -4548,8 +4553,8 @@ void triggerSetup_UniversalDecoder()
   secondaryToothCount = 0;
   secondaryHasSync = false;
   secondaryHasPassedToothOne = false;
+  
   /*
-
   //Primary trigger
   configPage4.triggerTeeth = 36; //The number of teeth on the wheel incl missing teeth.
   triggerToothAngle = 10; //The number of degrees that passes from tooth to tooth

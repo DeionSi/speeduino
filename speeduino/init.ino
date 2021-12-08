@@ -3218,9 +3218,9 @@ void initialiseTriggers()
       break;
 
     case DECODER_UNIVERSAL_EVEN_SPACED_TEETH:
-      triggerSetup_UniversalDecoder_EvenSpacedTeeth();
-      triggerSetup_UniversalDecoder();
-      
+      triggerSetup_UniversalDecoder_Reset();
+      triggerSetup_UniversalDecoder_PrimaryDecoder();
+      triggerSetup_UniversalDecoder_SecondaryDecoder();
       triggerHandler = triggerPri_UniversalDecoder;
       triggerSecondaryHandler = triggerSec_UniversalDecoder;
       getRPM = getRPM_UniversalDecoder;
@@ -3229,6 +3229,7 @@ void initialiseTriggers()
 
       primaryTriggerEdge = FALLING;
       secondaryTriggerEdge = FALLING;
+
       attachInterrupt(triggerInterrupt, triggerHandler, primaryTriggerEdge);
       attachInterrupt(triggerInterrupt2, triggerSecondaryHandler, secondaryTriggerEdge);
       break;
