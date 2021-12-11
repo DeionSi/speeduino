@@ -4486,6 +4486,7 @@ volatile bool secondaryHasPassedToothOne;
 byte camSpeedCrank_revolutionGap_gap;
 byte camSpeedCrank_revolutionGap_tooth;
 
+//TODO: Is this needed yet?
 enum UniversalDecoderOption {
   UniDecOpt_SECONDARY_IDENTIFIES_PRIMARY_FIRST_TOOTH = 1, //This option should also disable retrieving VVT angle from CAM //Not implemented
   UniDecOpt_SECONDARY_SUPPLEMENTS_PRIMARY_POSITION = 2 //Not implemented // Perhaps for CAS and Audi 135 wheels?
@@ -4539,21 +4540,19 @@ void triggerSetup_UniversalDecoder_Mazda36(TriggerGap * gaps, byte & size) {
 // Set up the TriggerGaps array according to the selected primary trigger options
 voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder() 
 {
-  //Set degrees based on speeduino setting
   uint16_t degrees;
+
+  //Change evenly-spaced-teeth-only CRANK_SPEED patterns into CAM_SPEED patterns
+  if (configPage4.TrigPattern == DECODER_UNIVERSAL_EVEN_SPACED_TEETH && configPage4.triggerMissingTeeth == 0) {
+    configPage4.TrigSpeed = CAM_SPEED;
+  }
+
+  //Set degrees based on setting
   if (configPage4.TrigSpeed == CRANK_SPEED) {
     degrees = 360;
   }
   else {
     degrees = 720;
-  }
-
-  // TODO: Fix so we don't change the configuration in speeduino
-  //Change evenly-spaced-teeth-only CRANK_SPEED patterns into CAM_SPEED patterns
-  if (configPage4.triggerMissingTeeth == 0 && configPage4.TrigSpeed == CRANK_SPEED) {
-    configPage4.triggerTeeth *= 2;
-    degrees = 720;
-    configPage4.TrigSpeed = CAM_SPEED;
   }
 
   camSpeedCrank_revolutionGap_gap = 0;
