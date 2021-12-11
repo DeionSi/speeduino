@@ -196,14 +196,21 @@ void triggerSec_NGC4();
 uint16_t getRPM_NGC();
 void triggerSetEndTeeth_NGC();
 
+typedef void (*voidFunction)();
 void triggerSetup_UniversalDecoder_Reset();
-void triggerSetup_UniversalDecoder_PrimaryDecoder();
+voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder();
 void triggerSetup_UniversalDecoder_SecondaryDecoder();
-void triggerPri_UniversalDecoder();
 void triggerSec_UniversalDecoder();
 uint16_t getRPM_UniversalDecoder();
 int getCrankAngle_UniversalDecoder();
 void triggerSetEndTeeth_UniversalDecoder();
+
+struct TriggerGap {
+  uint8_t count; // Count of gaps in a repeating pattern
+  uint16_t startAngle; // Angle at start
+  uint16_t lengthDegrees; // Degrees per gap
+  uint8_t ratioToPrevious; // Relative size of this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
+};
 
 extern void (*triggerHandler)(); //Pointer for the trigger function (Gets pointed to the relevant decoder)
 extern void (*triggerSecondaryHandler)(); //Pointer for the secondary trigger function (Gets pointed to the relevant decoder)
@@ -270,13 +277,6 @@ extern uint16_t ignition7EndTooth;
 extern uint16_t ignition8EndTooth;
 
 extern int16_t toothAngles[24]; //An array for storing fixed tooth angles. Currently sized at 24 for the GM 24X decoder, but may grow later if there are other decoders that use this style
-
-struct TriggerGap {
-  uint8_t count; // Count of gaps in a repeating pattern
-  uint16_t startAngle; // Angle at start
-  uint16_t lengthDegrees; // Degrees per gap
-  uint8_t ratioToPrevious; // Relative size of the this gap to the previous gap muliplied by 10 to allow for half. 5 = half, 10 = equal, 20 = twice as long, etc
-};
 
 //Used for identifying long and short pulses on the 4G63 (And possibly other) trigger patterns
 #define LONG 0;

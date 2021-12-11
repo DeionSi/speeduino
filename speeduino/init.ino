@@ -3219,9 +3219,8 @@ void initialiseTriggers()
 
     case DECODER_UNIVERSAL_EVEN_SPACED_TEETH:
       triggerSetup_UniversalDecoder_Reset();
-      triggerSetup_UniversalDecoder_PrimaryDecoder();
-      triggerSetup_UniversalDecoder_SecondaryDecoder();
-      triggerHandler = triggerPri_UniversalDecoder;
+      triggerHandler = triggerSetup_UniversalDecoder_PrimaryDecoder(); //Configures the primary decoder and returns the appropriate trigger handler
+      triggerSetup_UniversalDecoder_SecondaryDecoder(); //Configures the secondary decoder
       triggerSecondaryHandler = triggerSec_UniversalDecoder;
       getRPM = getRPM_UniversalDecoder;
       getCrankAngle = getCrankAngle_UniversalDecoder;
