@@ -4443,6 +4443,8 @@ void triggerSetEndTeeth_NGC()
  * Sync by polling cam - NOT NEEDED, SAME AS SYNC BY CAM
  * set DecoderIsSequential based on selected pattern - DecoderIsSequential is not used - NOT NEEDED
  * Sequential - DONE
+ * Change startRevolutions into startCycles as some cam trigger patterns cannot deduce when half revolution has happened (or maybe a special setting for on which tooth the half revolution occured) - DONE
+ * Set MAX_STALL_TIME - DONE
  * New Ignition Mode
  * Teeth at not integer degrees
  * Filter
@@ -4459,11 +4461,10 @@ void triggerSetEndTeeth_NGC()
  * More resolution for previous ratio
  * Higher RPM capability
  * Automaticly calculate gapcheckallowance based on maximum gap length and max viable RPM change/s
- * Don't check gaps for teeth with only evenly spaced teeth
+ * Don't check gaps for teeth with only evenly spaced teeth - DONE for crank, needs to be done for CAM?
  * Verify very low RPM (cranking)
  * Make secondary input not required for evenly spaced teeth without missing teeth where one tooth corresponds with one ignition event
- * Set MAX_STALL_TIME
- * Change startRevolutions into startCycles as some cam trigger patterns cannot deduce when half revolution has happened (or maybe a special setting for on which tooth the half revolution occured)
+ * Cranking RPM calculation
  */
 
 /* Important information
@@ -4816,6 +4817,15 @@ voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder()
 
   triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGaps, gapSize, degrees, configPage4.triggerTeeth, configPage4.triggerMissingTeeth);
   universalDecoder_fillGapsArray(TriggerGaps, gapSize);
+
+  //Set stalling time
+  uint16_t longestGap = 0;
+  for (int i = 0; i < gapSize; i++) {
+    if (longestGap < TriggerGaps[i].lengthDegrees) {
+      longestGap = TriggerGaps[i].lengthDegrees;
+    }
+  }
+  MAX_STALL_TIME = (3333UL * longestGap); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
 
   if (gapSize == 1) {
     universalDecoderOptions = UniDecOpt_SECONDARY_IDENTIFIES_PRIMARY_FIRST_TOOTH;
