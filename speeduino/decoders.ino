@@ -4451,8 +4451,8 @@ void triggerSetEndTeeth_NGC()
  * Quicker sync (requires a full rotation after finding tooth #1 currently) (should be possible by having a variable saying that once a specific gap/tooth has been reached sync can be attained)
  * Tertriary input
  * Tests for decoder
- * Test for making sure TriggerGaps is big enough and not bigger than necessary
- * Prevent overlap errors when TriggerGaps and CamTriggerGaps gap #1 are close to each other. (delay cam sync for X crank teeth setting?)
+ * Test for making sure priGapGroups is big enough and not bigger than necessary
+ * Prevent overlap errors when priGapGroups and secGapGroups gap #1 are close to each other. (delay cam sync for X crank teeth setting?)
  * cam tooth #1 and crank tooth #1 offset for VVT????
  * unionize triggergap arrays with other variables
  * don't check every gap after sync
@@ -4470,18 +4470,24 @@ void triggerSetEndTeeth_NGC()
 /* Important information
  * Primary should always read the correct crank position (ie, cams should be connected to secondary)
  * After finding tooth #1 every tooth will be checked during a full primary rotation before sync is achieved (to be changed with "early sync")
+ * Max tooth count per 
  */
 
-TriggerGap TriggerGaps[20]; //TODO: Crank is stored from the front. Cam is stored from the back.
-TriggerGap CamTriggerGaps[5];
-byte gapSize;
-volatile uint16_t gapLastLength;
-volatile uint8_t gapCurrent;
+TriggerGapGroup priGapGroups[20]; //TODO: Crank is stored from the front. Cam is stored from the back.
+byte priGapGroupsCount;
+volatile byte priGapGroupCurrent;
+
+volatile uint16_t priGapCurrent;
+
+volatile uint16_t priGapPreviousLength;
+
+TriggerGapGroup secGapGroups[5];
+byte secGapGroupsCount;
+volatile byte secGapGroupCurrent;
+
 const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
 
-byte gapSizeSec;
 volatile unsigned long lastGapSec;
-volatile uint8_t gapCurrentSec;
 volatile bool secondaryHasSync;
 volatile bool secondaryHasPassedToothOne;
 byte camSpeedCrank_revolutionGap_gap;
@@ -4499,16 +4505,16 @@ void triggerSetup_UniversalDecoder_Reset()
   revolutionOne = false;
 
   toothLastToothTime = 0;
-  gapLastLength = 0;
-  toothCurrentCount = 0;
+  priGapPreviousLength = 0;
+  priGapCurrent = 0;
   lastGap = 0;
-  gapCurrent = 0;
+  priGapGroupCurrent = 0;
 
   toothOneTime = 0;
   toothOneMinusOneTime = 0;
 
   toothLastSecToothTime = 0;
-  gapCurrentSec = 0;
+  secGapGroupCurrent = 0;
   lastGapSec = 0;
   secondaryToothCount = 0;
   secondaryHasSync = false;
@@ -4529,21 +4535,21 @@ void triggerSetup_UniversalDecoder_Reset()
 
 // Sync is achieved when the whole pattern is traversed
 inline void triggerPri_UniversalDecoder_sync(unsigned long curTime) {
-  //gapCurrent is the current gap in TriggerGaps (one TriggerGaps can contain multiple gaps) and toothCurrentCount is the current gap in one TriggerGap.
+  //priGapGroupCurrent is the current gap in priGapGroups (one priGapGroups can contain multiple gaps) and priGapCurrent is the current gap in one TriggerGapGroup.
   
-  if (toothCurrentCount >= TriggerGaps[gapCurrent].count) {
-    toothCurrentCount = 0;
+  if (priGapCurrent >= priGapGroups[priGapGroupCurrent].count) {
+    priGapCurrent = 0;
 
-    gapLastLength = TriggerGaps[gapCurrent].lengthDegrees;
+    priGapPreviousLength = priGapGroups[priGapGroupCurrent].lengthDegrees;
 
-    gapCurrent++;
-    if (gapCurrent >= gapSize) {
+    priGapGroupCurrent++;
+    if (priGapGroupCurrent >= priGapGroupsCount) {
       #ifdef DECODER_TESTING_DEION
       Serial.println("gained sync");
       #endif
 
       // We get here when all gaps have been seen
-      gapCurrent = 0;
+      priGapGroupCurrent = 0;
 
        //TODO: Should these be set/increased only if we have sync?
       currentStatus.startRevolutions++;
@@ -4569,7 +4575,7 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long curTime) {
     }
   }
 
-  if (configPage4.TrigSpeed == CAM_SPEED && camSpeedCrank_revolutionGap_gap == gapCurrent && camSpeedCrank_revolutionGap_tooth == toothCurrentCount && currentStatus.startRevolutions > 0) {
+  if (configPage4.TrigSpeed == CAM_SPEED && camSpeedCrank_revolutionGap_gap == priGapGroupCurrent && camSpeedCrank_revolutionGap_tooth == priGapCurrent && currentStatus.startRevolutions > 0) {
     currentStatus.startRevolutions++;
     toothOneMinusOneTime = toothOneTime;
     toothOneTime = curTime;
@@ -4587,7 +4593,7 @@ void triggerPri_UniversalDecoder_gapCheck() {
 
     //Set the gap checking boundaries based on the expected width of the gap
     uint16_t ratio; 
-    if (toothCurrentCount == 0) { ratio = (uint16_t)(TriggerGaps[gapCurrent].ratioToPrevious * 10); } //The first tooth in a TriggerGap "group" has a different gap to the previous tooth
+    if (priGapCurrent == 0) { ratio = (uint16_t)(priGapGroups[priGapGroupCurrent].ratioToPrevious * 10); } //The first tooth in a TriggerGapGroup "group" has a different gap to the previous tooth
     else { ratio = 100; } // Default, ie the same gap as before
 
     int16_t targetGapDifference = ( (lastGap * 100) / curGap) - ratio;
@@ -4599,14 +4605,14 @@ void triggerPri_UniversalDecoder_gapCheck() {
         BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
         currentStatus.syncLossCounter++;
       }
-      gapCurrent = 0;
+      priGapGroupCurrent = 0;
       currentStatus.startRevolutions = 0;
       toothOneMinusOneTime = 0;
       toothOneTime = 0;
-      toothCurrentCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
+      priGapCurrent = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
     }
 
-    toothCurrentCount++;
+    priGapCurrent++;
 
     triggerPri_UniversalDecoder_sync(curTime);
   }
@@ -4619,10 +4625,10 @@ void triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth() {
   unsigned long curTime = micros();
 
   //--------------- Don't check gaps for evenly spaced teeth patterns, just verify we see the secondary tooth at the correct location --------------------
-  toothCurrentCount++;
+  priGapCurrent++;
 
-  if ( (secondaryHasPassedToothOne == true  && toothCurrentCount != TriggerGaps[gapCurrent].count) || //If the secondary trigger is early (we missed a crank tooth)
-       (secondaryHasPassedToothOne == false && toothCurrentCount == TriggerGaps[gapCurrent].count) ) { //If the secondary trigger is late (we got an extra crank tooth)
+  if ( (secondaryHasPassedToothOne == true  && priGapCurrent != priGapGroups[priGapGroupCurrent].count) || //If the secondary trigger is early (we missed a crank tooth)
+       (secondaryHasPassedToothOne == false && priGapCurrent == priGapGroups[priGapGroupCurrent].count) ) { //If the secondary trigger is late (we got an extra crank tooth)
     if (currentStatus.hasSync == true) {
       currentStatus.hasSync = false;
       currentStatus.syncLossCounter++;
@@ -4630,13 +4636,13 @@ void triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth() {
       Serial.println("lost sync");
       #endif
     }
-    toothCurrentCount = -1;
+    priGapCurrent = -1;
     currentStatus.startRevolutions = 0;
     toothOneMinusOneTime = 0;
     toothOneTime = 0;
   }
-  else if (secondaryHasSync == false && toothCurrentCount == TriggerGaps[gapCurrent].count) {
-    toothCurrentCount--;
+  else if (secondaryHasSync == false && priGapCurrent == priGapGroups[priGapGroupCurrent].count) {
+    priGapCurrent--;
     //reset more things here?
   }
 
@@ -4649,7 +4655,7 @@ void triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth() {
 void triggerSec_UniversalDecoder() {
   unsigned long curTime = micros();
 
-  if (lastGapSec > 0 && gapSizeSec > 1) { // Only gap check when we can check them and if there are different gap lengths
+  if (lastGapSec > 0 && secGapGroupsCount > 1) { // Only gap check when we can check them and if there are different gap lengths
 
     //--------------- Gap checking / syncing --------------------
 
@@ -4657,7 +4663,7 @@ void triggerSec_UniversalDecoder() {
 
     //Set the gap checking boundaries based on the expected width of the gap
     uint16_t ratio; 
-    if (secondaryToothCount == 0) { ratio = (uint16_t)(CamTriggerGaps[gapCurrentSec].ratioToPrevious * 10); } //The first tooth in a CamTriggerGaps "group" has a different gap to the previous tooth
+    if (secondaryToothCount == 0) { ratio = (uint16_t)(secGapGroups[secGapGroupCurrent].ratioToPrevious * 10); } //The first tooth in a secGapGroups "group" has a different gap to the previous tooth
     else { ratio = 100; } // Default, ie the same gap as before
 
     int16_t targetGapDifference = ( (lastGapSec * 100) / curGap) - ratio;
@@ -4669,23 +4675,23 @@ void triggerSec_UniversalDecoder() {
         secondaryHasPassedToothOne = false;
         currentStatus.syncLossCounter++;
       }
-      gapCurrentSec = 0;
+      secGapGroupCurrent = 0;
       secondaryToothCount = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
     }
   }
 
-  if (lastGapSec > 0 || gapSizeSec == 1) { // Only increment tooth counter if we can gap check or if there's only size gap (normally single tooth pattern)
+  if (lastGapSec > 0 || secGapGroupsCount == 1) { // Only increment tooth counter if we can gap check or if there's only size gap (normally single tooth pattern)
     //--------------- Incrementing --------------------
 
-    //gapCurrentSec is the current gap in CamTriggerGaps (one CamTriggerGaps can contain multiple gaps) and secondaryToothCount is the current gap in one CamTriggerGap.
+    //secGapGroupCurrent is the current gap in secGapGroups (one secGapGroups can contain multiple gaps) and secondaryToothCount is the current gap in one CamTriggerGap.
     secondaryToothCount++;
-    if (secondaryToothCount >= CamTriggerGaps[gapCurrentSec].count) {
+    if (secondaryToothCount >= secGapGroups[secGapGroupCurrent].count) {
       secondaryToothCount = 0;
 
-      gapCurrentSec++;
-      if (gapCurrentSec >= gapSizeSec) {
+      secGapGroupCurrent++;
+      if (secGapGroupCurrent >= secGapGroupsCount) {
         // We get here when the last gap has been seen
-        gapCurrentSec = 0;
+        secGapGroupCurrent = 0;
         secondaryHasSync = true;
         secondaryHasPassedToothOne = true;
         //FAN_ON();
@@ -4713,20 +4719,20 @@ int getCrankAngle_UniversalDecoder()
 
   //Grab some variables that are used in the trigger code and assign them to temp variables.
   noInterrupts();
-  int tempToothCurrentCount = toothCurrentCount;
+  int tempPriGapCurrent = priGapCurrent;
   unsigned long tempToothLastToothTime = toothLastToothTime;
   unsigned long tempLastGap = lastGap;
-  uint16_t tempToothLastLength = gapLastLength;
-  uint8_t tempGapCurrent = gapCurrent;
+  uint16_t tempToothLastLength = priGapPreviousLength;
+  uint8_t temPriGapGroupCurrent = priGapGroupCurrent;
   bool tempRevolutionOne = revolutionOne;
   interrupts();
 
-  // If we are at a TriggerGap repetition the previous gap is the same as the current gap
-  if (tempToothCurrentCount > 0) { tempToothLastLength = TriggerGaps[tempGapCurrent].lengthDegrees; }
+  // If we are at a TriggerGapGroup repetition the previous gap is the same as the current gap
+  if (tempPriGapCurrent > 0) { tempToothLastLength = priGapGroups[temPriGapGroupCurrent].lengthDegrees; }
 
   //Estimate the number of degrees travelled since the last tooth}
   elapsedTime = (curTime - tempToothLastToothTime); //The time passed since the last tooth
-  int crankAngle = configPage4.triggerAngle + TriggerGaps[tempGapCurrent].startAngle + (tempToothCurrentCount * TriggerGaps[tempGapCurrent].lengthDegrees); // Degree at the last seen tooth
+  int crankAngle = configPage4.triggerAngle + priGapGroups[temPriGapGroupCurrent].startAngle + (tempPriGapCurrent * priGapGroups[temPriGapGroupCurrent].lengthDegrees); // Degree at the last seen tooth
 
   crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
 
@@ -4750,7 +4756,7 @@ void triggerSetEndTeeth_UniversalDecoder()
 }
 
 // Calculates and sets (caches) startAngle and ratioToPrevious based on count and lengthDegrees
-void universalDecoder_fillGapsArray(TriggerGap * gaps, byte size) {
+void universalDecoder_fillGapsArray(TriggerGapGroup * gaps, byte size) {
   uint16_t angle = 0;
   for (int i = 0; i < size; i++) {
 
@@ -4771,13 +4777,13 @@ void universalDecoder_fillGapsArray(TriggerGap * gaps, byte size) {
 // TODO: Manual: Only primary patterns with an even amount of teeth may operate at cam-speed
 // TODO: Manual: Missing teeth cam speed patterns must have more regular teeth than missing teeth
 // TODO: Add a counter for the actual total gap count per revolution
-void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGap * gaps, byte & size, uint16_t degrees, byte teeth, byte missingTeeth) {
+void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGapGroup * gaps, byte & size, uint16_t degrees, byte teeth, byte missingTeeth) {
   gaps[0].lengthDegrees = degrees/teeth;
   gaps[0].count = teeth - missingTeeth;
   if (missingTeeth > 0) {
     size = 2;
     gaps[0].count--;
-    gaps[1].lengthDegrees = TriggerGaps[0].lengthDegrees * (1 + missingTeeth);
+    gaps[1].lengthDegrees = priGapGroups[0].lengthDegrees * (1 + missingTeeth);
     gaps[1].count = 1;
   }
   else {
@@ -4786,7 +4792,7 @@ void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGap * gaps, byte & siz
 }
 
 // Mazda 36:+16-2+1-2+13-2 crank // TODO: Might not be correctly implemented
-void triggerSetup_UniversalDecoder_Mazda36(TriggerGap * gaps, byte & size) {
+void triggerSetup_UniversalDecoder_Mazda36(TriggerGapGroup * gaps, byte & size) {
   size = 4;
   gaps[0].count = 1;  gaps[0].lengthDegrees = 30;
   gaps[1].count = 15; gaps[1].lengthDegrees = 10;
@@ -4794,7 +4800,7 @@ void triggerSetup_UniversalDecoder_Mazda36(TriggerGap * gaps, byte & size) {
   gaps[3].count = 12; gaps[3].lengthDegrees = 10;
 }
 
-// Set up the TriggerGaps array according to the selected primary trigger options
+// Set up the priGapGroups array according to the selected primary trigger options
 voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder() 
 {
   uint16_t degrees;
@@ -4815,19 +4821,19 @@ voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder()
   camSpeedCrank_revolutionGap_gap = 0;
   camSpeedCrank_revolutionGap_tooth = configPage4.triggerTeeth/2;
 
-  triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGaps, gapSize, degrees, configPage4.triggerTeeth, configPage4.triggerMissingTeeth);
-  universalDecoder_fillGapsArray(TriggerGaps, gapSize);
+  triggerSetup_UniversalDecoder_EvenSpacedTeeth(priGapGroups, priGapGroupsCount, degrees, configPage4.triggerTeeth, configPage4.triggerMissingTeeth);
+  universalDecoder_fillGapsArray(priGapGroups, priGapGroupsCount);
 
   //Set stalling time
   uint16_t longestGap = 0;
-  for (int i = 0; i < gapSize; i++) {
-    if (longestGap < TriggerGaps[i].lengthDegrees) {
-      longestGap = TriggerGaps[i].lengthDegrees;
+  for (int i = 0; i < priGapGroupsCount; i++) {
+    if (longestGap < priGapGroups[i].lengthDegrees) {
+      longestGap = priGapGroups[i].lengthDegrees;
     }
   }
   MAX_STALL_TIME = (3333UL * longestGap); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
 
-  if (gapSize == 1) {
+  if (priGapGroupsCount == 1) {
     universalDecoderOptions = UniDecOpt_SECONDARY_IDENTIFIES_PRIMARY_FIRST_TOOTH;
     return triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth;
   }
@@ -4836,10 +4842,10 @@ voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder()
   }
 }
 
-// Set up the CamTriggerGaps array according to the selected secondary trigger options
+// Set up the secGapGroups array according to the selected secondary trigger options
 void triggerSetup_UniversalDecoder_SecondaryDecoder() {
-  triggerSetup_UniversalDecoder_EvenSpacedTeeth(CamTriggerGaps, gapSizeSec, 720, 1, 0); // One tooth cam
-  universalDecoder_fillGapsArray(CamTriggerGaps, gapSizeSec);
+  triggerSetup_UniversalDecoder_EvenSpacedTeeth(secGapGroups, secGapGroupsCount, 720, 1, 0); // One tooth cam
+  universalDecoder_fillGapsArray(secGapGroups, secGapGroupsCount);
 }
 
 /** @} */

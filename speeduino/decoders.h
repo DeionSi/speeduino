@@ -205,7 +205,7 @@ uint16_t getRPM_UniversalDecoder();
 int getCrankAngle_UniversalDecoder();
 void triggerSetEndTeeth_UniversalDecoder();
 
-struct TriggerGap {
+struct TriggerGapGroup {
   uint8_t count; // Count of gaps in a repeating pattern
   uint16_t startAngle; // Angle at start
   uint16_t lengthDegrees; // Degrees per gap
