@@ -4445,6 +4445,7 @@ void triggerSetEndTeeth_NGC()
  * Sequential - DONE
  * Change startRevolutions into startCycles as some cam trigger patterns cannot deduce when half revolution has happened (or maybe a special setting for on which tooth the half revolution occured) - DONE
  * Set MAX_STALL_TIME - DONE
+ * Only verify gaps needed for sync - DONE
  * New Ignition Mode
  * Teeth at not integer degrees
  * Filter
@@ -4608,46 +4609,55 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
   #endif
 }
 
-// TODO: Only verify gaps needed for sync
+// TODO: Doxygen for all functions
 void triggerPri_UniversalDecoder_gapCheck() {
   unsigned long curTime = micros();
+  unsigned long curGap = curTime - toothLastToothTime;
 
   if (lastGap > 0) { // Only count teeth when we can check them
 
     //--------------- Compare gaps --------------------
-    unsigned long curGap = curTime - toothLastToothTime;
-
     if (priGapCurrent < 0) { priGapCurrent = 0; } //First tooth to compare is always tooth 0
 
-    //Set the gap checking boundaries based on the expected width of the gap
-    uint16_t ratio; 
-    if (priGapCurrent == 0) { ratio = (uint16_t)(priGapGroups[priGapGroupCurrent].ratioToPrevious * 10); } //The first tooth in a TriggerGapGroup "group" has a different gap to the previous tooth
-    else { ratio = 100; } // Default, ie the same gap as before
+    if (priGapGroupCurrent < priSyncGuaranteed_gapGroup || (priGapGroupCurrent == priSyncGuaranteed_gapGroup && priGapCurrent < priSyncGuaranteed_gap)) { // Check gaps until we've reached the guaranteed sync (check sync every loop)
+      
+      #ifdef DECODER_TESTING_DEION
+      Serial.println("checking gap");
+      #endif
 
-    int16_t targetGapDifference = ( (lastGap * 100) / curGap) - ratio;
-    targetGapDifference = abs(targetGapDifference);
+      //Set the gap checking boundaries based on the expected width of the gap
+      uint16_t ratio; 
+      if (priGapCurrent == 0) { ratio = (uint16_t)(priGapGroups[priGapGroupCurrent].ratioToPrevious * 10); } //The first tooth in a TriggerGapGroup "group" has a different gap to the previous tooth
+      else { ratio = 100; } // Default, ie the same gap as before
 
-    if (targetGapDifference > gapCheckAllowance) {
-      if (currentStatus.hasSync == true || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) {
-        currentStatus.hasSync = false;
-        BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-        currentStatus.syncLossCounter++;
+      int16_t targetGapDifference = ( (lastGap * 100) / curGap) - ratio;
+      targetGapDifference = abs(targetGapDifference);
+
+      if (targetGapDifference > gapCheckAllowance) {
+        if (currentStatus.hasSync == true || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) {
+          currentStatus.hasSync = false;
+          BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+          currentStatus.syncLossCounter++;
+        }
+        // Maybe just call triggerSetup_UniversalDecoder_Reset instead?
+        currentStatus.startRevolutions = 0;
+        toothOneMinusOneTime = 0;
+        toothOneTime = 0;
+        priGapGroupCurrent = 0;
+        priGapCurrent = -1;
       }
-      // Maybe just call triggerSetup_UniversalDecoder_Reset instead?
-      currentStatus.startRevolutions = 0;
-      toothOneMinusOneTime = 0;
-      toothOneTime = 0;
-      priGapGroupCurrent = 0;
-      priGapCurrent = -1;
+      else {
+        priGapCurrent++;
+      }
     }
-    else {
+    else { // We don't need to check gaps after we've guaranteed sync
       priGapCurrent++;
     }
 
     triggerPri_UniversalDecoder_sync(curTime);
   }
 
-  if (toothLastToothTime > 0) { lastGap = curTime - toothLastToothTime; }
+  if (toothLastToothTime > 0) { lastGap = curGap; }
   toothLastToothTime = curTime;
 }
 
