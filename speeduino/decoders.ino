@@ -4465,6 +4465,7 @@ void triggerSetEndTeeth_NGC()
  * Verify very low RPM (cranking)
  * Make secondary input not required for evenly spaced teeth without missing teeth where one tooth corresponds with one ignition event
  * Cranking RPM calculation
+ * Implement cycle speed (180 degrees instead of 360 or 720) (needed for crank wheels ). same as supporting basic distributor? Not sure if this is needed
  */
 
 /* Important information
@@ -4474,12 +4475,16 @@ void triggerSetEndTeeth_NGC()
  */
 
 TriggerGapGroup priGapGroups[20]; //TODO: Crank is stored from the front. Cam is stored from the back.
+//TODO: doxygen: the first triggergapgroup(s) should be those required for sync. startAngle is used to set tooth 0.
 byte priGapGroupsCount;
 volatile byte priGapGroupCurrent;
 
-volatile uint16_t priGapCurrent;
-
+volatile int16_t priGapCurrent;
 volatile uint16_t priGapPreviousLength;
+
+// When this becomes the current gap we can declare sync.
+byte priSyncGuaranteed_gapGroup;
+byte priSyncGuaranteed_gap;
 
 TriggerGapGroup secGapGroups[5];
 byte secGapGroupsCount;
@@ -4490,8 +4495,8 @@ const byte gapCheckAllowance = 0.2 * 100; // Percentage * 100
 volatile unsigned long lastGapSec;
 volatile bool secondaryHasSync;
 volatile bool secondaryHasPassedToothOne;
-byte camSpeedCrank_revolutionGap_gap;
-byte camSpeedCrank_revolutionGap_tooth;
+byte camSpeedCrank_revolutionTwo_gapGroup;
+byte camSpeedCrank_revolutionTwo_gap;
 
 //TODO: Is this needed yet?
 enum UniversalDecoderOption {
@@ -4499,6 +4504,8 @@ enum UniversalDecoderOption {
   UniDecOpt_SECONDARY_SUPPLEMENTS_PRIMARY_POSITION = 2 //Not implemented // Perhaps for CAS and Audi 135 wheels?
 } universalDecoderOptions;
 
+//TODO: Check that all used variables are reset
+//TODO: Check when this function is called. Is it called after stall?
 void triggerSetup_UniversalDecoder_Reset()
 {
   secondDerivEnabled = false;
@@ -4506,7 +4513,7 @@ void triggerSetup_UniversalDecoder_Reset()
 
   toothLastToothTime = 0;
   priGapPreviousLength = 0;
-  priGapCurrent = 0;
+  priGapCurrent = -1;
   lastGap = 0;
   priGapGroupCurrent = 0;
 
@@ -4534,9 +4541,9 @@ void triggerSetup_UniversalDecoder_Reset()
 #endif
 
 // Sync is achieved when the whole pattern is traversed
-inline void triggerPri_UniversalDecoder_sync(unsigned long curTime) {
-  //priGapGroupCurrent is the current gap in priGapGroups (one priGapGroups can contain multiple gaps) and priGapCurrent is the current gap in one TriggerGapGroup.
+inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
   
+  //priGapGroupCurrent is the current gap in priGapGroups (one priGapGroups can contain multiple gaps) and priGapCurrent is the current gap in one TriggerGapGroup.
   if (priGapCurrent >= priGapGroups[priGapGroupCurrent].count) {
     priGapCurrent = 0;
 
@@ -4544,45 +4551,64 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long curTime) {
 
     priGapGroupCurrent++;
     if (priGapGroupCurrent >= priGapGroupsCount) {
-      #ifdef DECODER_TESTING_DEION
-      Serial.println("gained sync");
-      #endif
-
-      // We get here when all gaps have been seen
       priGapGroupCurrent = 0;
+    }
+  }
 
-       //TODO: Should these be set/increased only if we have sync?
-      currentStatus.startRevolutions++;
-      toothOneMinusOneTime = toothOneTime;
-      toothOneTime = curTime;
+  
+  if ( ( priGapGroupCurrent == priSyncGuaranteed_gapGroup && priGapCurrent == priSyncGuaranteed_gap ) || //If we reach this gap, we know we have achieved sync
+       (BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) == true && secondaryHasSync == true ) ) { // These checks enables us to get full sync as soon as we get cam sync (ie quicker)
+
+    #ifdef DECODER_TESTING_DEION
+    Serial.println("synced");
+    #endif
+    
+    //Determine which kind of sync we have
+    //TODO: Maybe revert this to how it was before? (ie, it didn't lose sync to half-sync if cam was lost)
+    if (configPage4.sparkMode != IGN_MODE_SEQUENTIAL && configPage2.injLayout != INJ_SEQUENTIAL) { // If fuel and spark is not sequential, we have full sync
+      currentStatus.hasSync = true;
+      BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+    }
+    else if (secondaryHasSync == true) { // If fuel or spark is sequential and secondary has sync, we have full sync
+      currentStatus.hasSync = true;
+      BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+    }
+    else { // If fuel or spark is sequential and secondary does not have sync, we have half-sync
+      currentStatus.hasSync = false;
+      BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); 
+    }
+
+  }
+
+  //TODO: Currently the first gap of a TriggerGapGroup needs to start at 0 degrees. Make it so it doesn't have to or make it a requirement that it has to
+  // When we have sync we handle the once per revolution tasks at 0 degrees (and at 360 degrees if we have a cam_speed wheel)
+  if (currentStatus.hasSync == true) {
+    if ( (priGapGroups[priGapGroupCurrent].startAngle == 0 && priGapCurrent == 0) ||
+         (configPage4.TrigSpeed == CAM_SPEED && priGapGroupCurrent == camSpeedCrank_revolutionTwo_gapGroup && priGapCurrent == camSpeedCrank_revolutionTwo_gap) ) {
+      
       #ifndef DECODER_TESTING_DEION
       FAN_ON();
       #endif
 
+      //TODO: Should these be set/increased also if we only have half-sync?
+      //TODO: Ideally startRevolutions should not increment until a full revolution has occured, now it can occur at the same time as getting sync
+      currentStatus.startRevolutions++;
+      toothOneMinusOneTime = toothOneTime;
+      toothOneTime = curTime;
+
       if (secondaryHasPassedToothOne == true) { revolutionOne = true; secondaryHasPassedToothOne = false; }
       else { revolutionOne = !revolutionOne; }
-
-      //if Sequential fuel or ignition is in use, further checks are needed before determining sync
-      if (configPage4.sparkMode == IGN_MODE_SEQUENTIAL || configPage2.injLayout == INJ_SEQUENTIAL) {
-
-        //If either fuel or ignition is sequential, only declare sync if the cam tooth has been seen OR if the missing wheel is on the cam
-        if (secondaryHasSync == true) { currentStatus.hasSync = true; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //the engine is fully synced so clear the Half Sync bit
-        else { currentStatus.hasSync = false; BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //If there is primary trigger but no secondary we only have half sync. //TODO: Maybe revert this to how it was before?
-
-      }
-      else { currentStatus.hasSync = true; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); } //If nothing is using sequential, we have sync and also clear half sync bit
 
     }
   }
 
-  if (configPage4.TrigSpeed == CAM_SPEED && camSpeedCrank_revolutionGap_gap == priGapGroupCurrent && camSpeedCrank_revolutionGap_tooth == priGapCurrent && currentStatus.startRevolutions > 0) {
-    currentStatus.startRevolutions++;
-    toothOneMinusOneTime = toothOneTime;
-    toothOneTime = curTime;
-    revolutionOne = !revolutionOne;
-  }
+  #ifdef DECODER_TESTING_DEION
+  //Serial.print("c:");
+  //Serial.print(priGapGroups[priGapGroupCurrent].startAngle + (priGapGroups[priGapGroupCurrent].lengthDegrees * priGapCurrent));
+  #endif
 }
 
+// TODO: Only verify gaps needed for sync
 void triggerPri_UniversalDecoder_gapCheck() {
   unsigned long curTime = micros();
 
@@ -4590,6 +4616,8 @@ void triggerPri_UniversalDecoder_gapCheck() {
 
     //--------------- Compare gaps --------------------
     unsigned long curGap = curTime - toothLastToothTime;
+
+    if (priGapCurrent < 0) { priGapCurrent = 0; } //First tooth to compare is always tooth 0
 
     //Set the gap checking boundaries based on the expected width of the gap
     uint16_t ratio; 
@@ -4605,14 +4633,16 @@ void triggerPri_UniversalDecoder_gapCheck() {
         BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
         currentStatus.syncLossCounter++;
       }
-      priGapGroupCurrent = 0;
+      // Maybe just call triggerSetup_UniversalDecoder_Reset instead?
       currentStatus.startRevolutions = 0;
       toothOneMinusOneTime = 0;
       toothOneTime = 0;
-      priGapCurrent = -1; // Set this to -1 (65535) as tooth 0 is tooth 1 in this decoder, this will immediately be incremented to 0 in this function
+      priGapGroupCurrent = 0;
+      priGapCurrent = -1;
     }
-
-    priGapCurrent++;
+    else {
+      priGapCurrent++;
+    }
 
     triggerPri_UniversalDecoder_sync(curTime);
   }
@@ -4621,29 +4651,32 @@ void triggerPri_UniversalDecoder_gapCheck() {
   toothLastToothTime = curTime;
 }
 
+// TODO: Make both only evenly spaced teeth and gap check count the first tooth the same? priGapCurrent should always point to the current gap we are in
 void triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth() {
   unsigned long curTime = micros();
 
   //--------------- Don't check gaps for evenly spaced teeth patterns, just verify we see the secondary tooth at the correct location --------------------
   priGapCurrent++;
 
-  if ( (secondaryHasPassedToothOne == true  && priGapCurrent != priGapGroups[priGapGroupCurrent].count) || //If the secondary trigger is early (we missed a crank tooth)
-       (secondaryHasPassedToothOne == false && priGapCurrent == priGapGroups[priGapGroupCurrent].count) ) { //If the secondary trigger is late (we got an extra crank tooth)
-    if (currentStatus.hasSync == true) {
+  if (currentStatus.hasSync == true) {
+    if ( (secondaryHasPassedToothOne == true  && priGapCurrent != priGapGroups[priGapGroupCurrent].count) || //If the secondary trigger is early (we missed a crank tooth)
+         (secondaryHasPassedToothOne == false && priGapCurrent == priGapGroups[priGapGroupCurrent].count) )  //If the secondary trigger is late (we got an extra crank tooth)
+      { 
       currentStatus.hasSync = false;
+      secondaryHasSync = false;
       currentStatus.syncLossCounter++;
+      priGapCurrent = -1;
+      currentStatus.startRevolutions = 0;
+      toothOneMinusOneTime = 0;
+      toothOneTime = 0;
+      
       #ifdef DECODER_TESTING_DEION
       Serial.println("lost sync");
       #endif
     }
-    priGapCurrent = -1;
-    currentStatus.startRevolutions = 0;
-    toothOneMinusOneTime = 0;
-    toothOneTime = 0;
   }
-  else if (secondaryHasSync == false && priGapCurrent == priGapGroups[priGapGroupCurrent].count) {
-    priGapCurrent--;
-    //reset more things here?
+  else if (secondaryHasSync == false) {
+    priGapCurrent = -1;
   }
 
   triggerPri_UniversalDecoder_sync(curTime);
@@ -4777,14 +4810,19 @@ void universalDecoder_fillGapsArray(TriggerGapGroup * gaps, byte size) {
 // TODO: Manual: Only primary patterns with an even amount of teeth may operate at cam-speed
 // TODO: Manual: Missing teeth cam speed patterns must have more regular teeth than missing teeth
 // TODO: Add a counter for the actual total gap count per revolution
+// TODO: Verify 1st level for 1st phase is the same for evenspacedteeth and gapcheck
 void triggerSetup_UniversalDecoder_EvenSpacedTeeth(TriggerGapGroup * gaps, byte & size, uint16_t degrees, byte teeth, byte missingTeeth) {
-  gaps[0].lengthDegrees = degrees/teeth;
+  gaps[0].lengthDegrees = degrees / teeth;
   gaps[0].count = teeth - missingTeeth;
-  if (missingTeeth > 0) {
+
+  if (missingTeeth > 0) { // Add a second TriggerGapGroup for missing teeth as the gap length is longer
     size = 2;
-    gaps[0].count--;
-    gaps[1].lengthDegrees = priGapGroups[0].lengthDegrees * (1 + missingTeeth);
-    gaps[1].count = 1;
+    gaps[1] = gaps[0]; // Put the missing tooth first since that is what we sync on
+    gaps[1].count--; // Remove an extra gap because the missing gap is in a separate TriggerGapGroup
+    gaps[0].lengthDegrees = priGapGroups[0].lengthDegrees * (1 + missingTeeth);
+    gaps[0].count = 1;
+    priSyncGuaranteed_gapGroup = 1;
+    priSyncGuaranteed_gap = 0;
   }
   else {
     size = 1;
@@ -4803,32 +4841,40 @@ void triggerSetup_UniversalDecoder_Mazda36(TriggerGapGroup * gaps, byte & size) 
 // Set up the priGapGroups array according to the selected primary trigger options
 voidFunction triggerSetup_UniversalDecoder_PrimaryDecoder() 
 {
-  uint16_t degrees;
-
   //Change evenly-spaced-teeth-only CRANK_SPEED patterns into CAM_SPEED patterns
   if (configPage4.TrigPattern == DECODER_UNIVERSAL_EVEN_SPACED_TEETH && configPage4.triggerMissingTeeth == 0) {
     configPage4.TrigSpeed = CAM_SPEED;
   }
 
   //Set degrees based on setting
-  if (configPage4.TrigSpeed == CRANK_SPEED) {
-    degrees = 360;
-  }
-  else {
-    degrees = 720;
-  }
-
-  camSpeedCrank_revolutionGap_gap = 0;
-  camSpeedCrank_revolutionGap_tooth = configPage4.triggerTeeth/2;
+  uint16_t degrees, halfDegrees;
+  if (configPage4.TrigSpeed == CRANK_SPEED) { degrees = 360; }
+  else { degrees = 720; }
+  halfDegrees = degrees >> 1;
 
   triggerSetup_UniversalDecoder_EvenSpacedTeeth(priGapGroups, priGapGroupsCount, degrees, configPage4.triggerTeeth, configPage4.triggerMissingTeeth);
   universalDecoder_fillGapsArray(priGapGroups, priGapGroupsCount);
 
-  //Set stalling time
+  if (configPage4.triggerMissingTeeth > 0) { // For missing teeth wheels we gain sync if we reach the first gap after the first gap
+    priSyncGuaranteed_gapGroup = 1;
+    priSyncGuaranteed_gap = 0;
+  }
+  else { // For evenly spaced teeth only wheels we can gain sync as soon as we've gotten a signal(gap). Needs secondary sync to actually gain sync
+    priSyncGuaranteed_gapGroup = 0;
+    priSyncGuaranteed_gap = 0;
+  }
+
+  //Set stalling time. Set second revolution gap for CAM_SPEED
   uint16_t longestGap = 0;
   for (int i = 0; i < priGapGroupsCount; i++) {
     if (longestGap < priGapGroups[i].lengthDegrees) {
       longestGap = priGapGroups[i].lengthDegrees;
+    }
+    //Check if the gap opposing the first gap is in this TriggerGapGroup
+    uint16_t endAngle = priGapGroups[i].startAngle + priGapGroups[i].lengthDegrees * priGapGroups[i].count;
+    if (priGapGroups[i].startAngle < halfDegrees && endAngle > halfDegrees) {
+      camSpeedCrank_revolutionTwo_gapGroup = i;
+      camSpeedCrank_revolutionTwo_gap = ( (halfDegrees - priGapGroups[i].startAngle) / priGapGroups[i].lengthDegrees);
     }
   }
   MAX_STALL_TIME = (3333UL * longestGap); //Minimum 50rpm. (3333uS is the time per degree at 50rpm)
