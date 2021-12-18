@@ -4556,34 +4556,34 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
     }
   }
 
-  
-  if ( ( priGapGroupCurrent == priSyncGuaranteed_gapGroup && priGapCurrent == priSyncGuaranteed_gap ) || //If we reach this gap, we know we have achieved sync
-       (BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) == true && secondaryHasSync == true ) ) { // These checks enables us to get full sync as soon as we get cam sync (ie quicker)
+  if (currentStatus.hasSync == false) { // If we have full sync, we don't need to set sync
+    if ( ( priGapGroupCurrent == priSyncGuaranteed_gapGroup && priGapCurrent == priSyncGuaranteed_gap ) || //If we reach this gap, we know we have achieved sync
+        (BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) == true && secondaryHasSync == true ) ) { // These checks enables us to get full sync as soon as we get cam sync (ie quicker)
 
-    #ifdef DECODER_TESTING_DEION
-    Serial.println("synced");
-    #endif
-    
-    //Determine which kind of sync we have
-    //TODO: Maybe revert this to how it was before? (ie, it didn't lose sync to half-sync if cam was lost)
-    if (configPage4.sparkMode != IGN_MODE_SEQUENTIAL && configPage2.injLayout != INJ_SEQUENTIAL) { // If fuel and spark is not sequential, we have full sync
-      currentStatus.hasSync = true;
-      BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-    }
-    else if (secondaryHasSync == true) { // If fuel or spark is sequential and secondary has sync, we have full sync
-      currentStatus.hasSync = true;
-      BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-    }
-    else { // If fuel or spark is sequential and secondary does not have sync, we have half-sync
-      currentStatus.hasSync = false;
-      BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); 
-    }
+      #ifdef DECODER_TESTING_DEION
+      Serial.println("synced");
+      #endif
 
+      //Determine which kind of sync we have
+      //TODO: Maybe revert this to how it was before? (ie, it didn't lose sync to half-sync if cam was lost)
+      
+      if (configPage4.sparkMode != IGN_MODE_SEQUENTIAL && configPage2.injLayout != INJ_SEQUENTIAL) { // If fuel and spark is not sequential, we have full sync
+        currentStatus.hasSync = true;
+        BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+      }
+      else if (secondaryHasSync == true) { // If fuel or spark is sequential and secondary has sync, we have full sync
+        currentStatus.hasSync = true;
+        BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+      }
+      else { // If fuel or spark is sequential and secondary does not have sync, we have half-sync
+        currentStatus.hasSync = false;
+        BIT_SET(currentStatus.status3, BIT_STATUS3_HALFSYNC); 
+      }
+
+    }
   }
-
   //TODO: Currently the first gap of a TriggerGapGroup needs to start at 0 degrees. Make it so it doesn't have to or make it a requirement that it has to
-  // When we have sync we handle the once per revolution tasks at 0 degrees (and at 360 degrees if we have a cam_speed wheel)
-  if (currentStatus.hasSync == true) {
+  else { // When we have sync we handle the once per revolution tasks at 0 degrees (and at 360 degrees if we have a cam_speed wheel)
     if ( (priGapGroups[priGapGroupCurrent].startAngle == 0 && priGapCurrent == 0) ||
          (configPage4.TrigSpeed == CAM_SPEED && priGapGroupCurrent == camSpeedCrank_revolutionTwo_gapGroup && priGapCurrent == camSpeedCrank_revolutionTwo_gap) ) {
       
@@ -4592,8 +4592,9 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
       #endif
 
       //TODO: Should these be set/increased also if we only have half-sync?
-      //TODO: Ideally startRevolutions should not increment until a full revolution has occured, now it can occur at the same time as getting sync
-      currentStatus.startRevolutions++;
+      if (toothOneTime > 0) { // Don't start counting revolutions until we've done a full revolution
+        currentStatus.startRevolutions++;
+      }
       toothOneMinusOneTime = toothOneTime;
       toothOneTime = curTime;
 
