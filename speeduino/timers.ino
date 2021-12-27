@@ -19,6 +19,7 @@ Timers are typically low resolution (Compared to Schedulers), with maximum frequ
 #include "scheduler.h"
 #include "auxiliaries.h"
 #include "comms.h"
+#include "debug.hpp"
 
 #if defined(CORE_AVR)
   #include <avr/wdt.h>
@@ -43,6 +44,7 @@ ISR(TIMER2_OVF_vect, ISR_NOBLOCK) //This MUST be no block. Turning NO_BLOCK off 
 void oneMSInterval() //Most ARM chips can simply call a function
 #endif
 {
+  setProfilingSignal(PROFILING_SIGNAL::ONEMS, true);
   ms_counter++;
 
   //Increment Loop Counters
@@ -269,5 +271,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
     //Reset Timer2 to trigger in another ~1ms
     TCNT2 = 131;            //Preload timer2 with 100 cycles, leaving 156 till overflow.
 #endif
+
+  setProfilingSignal(PROFILING_SIGNAL::ONEMS, true);
 }
 

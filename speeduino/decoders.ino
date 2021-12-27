@@ -39,6 +39,7 @@ A full copy of the license may be found in the projects root directory
 #include "scheduler.h"
 #include "crankMaths.h"
 #include "timers.h"
+#include "debug.hpp"
 
 void (*triggerHandler)(); ///Pointer for the trigger function (Gets pointed to the relevant decoder)
 void (*triggerSecondaryHandler)(); ///Pointer for the secondary trigger function (Gets pointed to the relevant decoder)

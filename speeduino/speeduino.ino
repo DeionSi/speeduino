@@ -41,6 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "engineProtection.h"
 #include "secondaryTables.h"
 #include "SD_logger.h"
+#include <debug.hpp>
 #include RTC_LIB_H //Defined in each boards .h file
 #include BOARD_H //Note that this is not a real file, it is defined in globals.h. 
 
@@ -86,8 +87,13 @@ uint16_t staged_req_fuel_mult_sec = 0;
 #ifndef UNIT_TEST // Scope guard for unit testing
 void setup()
 {
+  initiateProfilingPins();
+  setProfilingSignal(INIT, false);
+
   initialisationComplete = false; //Tracks whether the initialiseAll() function has run completely
   initialiseAll();
+  
+  setProfilingSignal(INIT, false);
 }
 /** Speeduino main loop.
  * 
@@ -107,6 +113,7 @@ void setup()
  */
 void loop()
 {
+    setProfilingSignal(LOOP1, false);
       mainLoopCount++;
       LOOP_TIMER = TIMER_mask;
 
@@ -223,12 +230,15 @@ void loop()
       if(configPage4.ignBypassEnabled > 0) { digitalWrite(pinIgnBypass, LOW); } //Reset the ignition bypass ready for next crank attempt
     }
 
+
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
     readMAP();
-    
+    setProfilingSignal(LOOP1, false);
+
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
+      setProfilingSignal(LOOP2, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_15HZ);
       #if TPS_READ_FREQUENCY == 15
         readTPS(); //TPS reading to be performed every 32 loops (any faster and it can upset the TPSdot sampling time)
@@ -270,10 +280,12 @@ void loop()
 
       //And check whether the tooth log buffer is ready
       if(toothHistoryIndex > TOOTH_LOG_SIZE) { BIT_SET(currentStatus.status1, BIT_STATUS1_TOOTHLOG1READY); }
-
+      setProfilingSignal(LOOP2, false);
     }
+    
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) //10 hertz
     {
+      setProfilingSignal(LOOP3, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_10HZ);
       //updateFullStatus();
       checkProgrammableIO();
@@ -286,9 +298,12 @@ void loop()
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_10HZ) { writeSDLogEntry(); }
       #endif
+
+      setProfilingSignal(LOOP3, false);
     }
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ)) //30 hertz
     {
+      setProfilingSignal(LOOP4, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_30HZ);
       //Most boost tends to run at about 30Hz, so placing it here ensures a new target time is fetched frequently enough
       boostControl();
@@ -306,9 +321,14 @@ void loop()
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
       #endif
+      
+      setProfilingSignal(LOOP4, false);
     }
+    
+    
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_4HZ))
     {
+      setProfilingSignal(LOOP5, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_4HZ);
       //The IAT and CLT readings can be done less frequently (4 times per second)
       readCLT();
@@ -382,9 +402,12 @@ void loop()
           } //Channel type
         } //For loop going through each channel
       } //aux channels are enabled
+
+      setProfilingSignal(LOOP5, false);
     } //4Hz timer
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ)) //Once per second)
     {
+      setProfilingSignal(LOOP6, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
       readBaro(); //Infrequent baro readings are not an issue.
       deferEEPROMWrites = false; //Reset the slow EEPROM writes flag so that EEPROM burns will return to normal speed. This is set true in NewComms whenever there is a large chunk write to prvent mega2560s halting due to excess EEPROM burn times. 
@@ -407,7 +430,9 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_1HZ) { writeSDLogEntry(); }
       #endif
 
+      setProfilingSignal(LOOP6, false);
     } //1Hz timer
+    setProfilingSignal(LOOP7, false);
 
     if( (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_OL)
     || (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_CL)
@@ -421,11 +446,12 @@ void loop()
     currentStatus.VE1 = getVE1();
     currentStatus.VE = currentStatus.VE1; //Set the final VE value to be VE 1 as a default. This may be changed in the section below
 
-    currentStatus.advance1 = getAdvance1();
-    currentStatus.advance = currentStatus.advance1; //Set the final advance value to be advance 1 as a default. This may be changed in the section below
+    //currentStatus.advance1 = getAdvance1();
+    //currentStatus.advance = currentStatus.advance1; //Set the final advance value to be advance 1 as a default. This may be changed in the section below
 
     calculateSecondaryFuel();
-    calculateSecondarySpark();
+    //calculateSecondarySpark();
+
 
     //Always check for sync
     //Main loop runs within this clause
@@ -1278,6 +1304,8 @@ void loop()
       digitalWrite(pinResetControl, LOW);
       BIT_CLEAR(currentStatus.status3, BIT_STATUS3_RESET_PREVENT);
     }
+
+    setProfilingSignal(LOOP7, false);
 } //loop()
 #endif //Unit test guard
 

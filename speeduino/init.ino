@@ -18,6 +18,7 @@
 #include "idle.h"
 #include "table2d.h"
 #include "acc_mc33810.h"
+#include "debug.hpp"
 #include BOARD_H //Note that this is not a real file, it is defined in globals.h. 
 #include EEPROM_LIB_H
 #ifdef SD_LOGGING
@@ -1335,7 +1336,7 @@ void setPinMapping(byte boardID)
       pinFan = 47; //Pin for the fan output (Goes to ULN2803)
       pinLaunch = 51; //Can be overwritten below
       pinFlex = 2; // Flex sensor (Must be external interrupt enabled)
-      pinResetControl = 43; //Reset control output
+      pinResetControl = 1; //Reset control output
       pinBaro = A5;
       pinVSS = 20;
       pinWMIEmpty = 46;
@@ -3267,4 +3268,7 @@ void initialiseTriggers()
       else { attachInterrupt(triggerInterrupt, triggerHandler, FALLING); }
       break;
   }
+
+  detachInterrupt( digitalPinToInterrupt(pinTrigger) );
+  attachInterrupt( digitalPinToInterrupt(pinTrigger), profilingPrimaryTrigger, primaryTriggerEdge );
 }
