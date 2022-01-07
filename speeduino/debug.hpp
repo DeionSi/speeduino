@@ -12,6 +12,8 @@ enum PROFILING_SIGNAL : char {
   LOOP7,
   LOOP8,
   TRIGPRI,
+  TRIGSEC,
+  TRIGTER,
   ONEMS,
   END_OF_ENUM
 };
@@ -19,5 +21,7 @@ enum PROFILING_SIGNAL : char {
 void initiateProfilingPins();
 void setProfilingSignal(PROFILING_SIGNAL signal, bool inInterrupt);
 void profilingPrimaryTrigger();
+void profilingSecondaryTrigger();
+void profilingTertriaryTrigger();
 
 #endif

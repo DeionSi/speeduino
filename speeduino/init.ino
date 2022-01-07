@@ -3269,6 +3269,12 @@ void initialiseTriggers()
       break;
   }
 
-  detachInterrupt( digitalPinToInterrupt(pinTrigger) );
-  attachInterrupt( digitalPinToInterrupt(pinTrigger), profilingPrimaryTrigger, primaryTriggerEdge );
+  detachInterrupt( triggerInterrupt );
+  attachInterrupt( triggerInterrupt, profilingPrimaryTrigger, primaryTriggerEdge );
+  
+  detachInterrupt( triggerInterrupt2 );
+  attachInterrupt( triggerInterrupt2, profilingSecondaryTrigger, primaryTriggerEdge );
+  
+  detachInterrupt( triggerInterrupt3 );
+  attachInterrupt( triggerInterrupt3, profilingTertriaryTrigger, primaryTriggerEdge );
 }

@@ -47,6 +47,18 @@ void profilingPrimaryTrigger() {
   setProfilingSignal(TRIGPRI, true);
 }
 
+void profilingSecondaryTrigger() {
+  setProfilingSignal(TRIGSEC, true);
+  triggerSecondaryHandler();
+  setProfilingSignal(TRIGSEC, true);
+}
+
+void profilingTertriaryTrigger() {
+  setProfilingSignal(TRIGTER, true);
+  triggerTertiaryHandler();
+  setProfilingSignal(TRIGTER, true);
+}
+
 void setProfilingSignal(PROFILING_SIGNAL signal, bool inInterrupt) {
   noInterrupts();
 
