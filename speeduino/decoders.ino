@@ -4541,6 +4541,7 @@ void triggerSetup_UniversalDecoder_Reset()
 #include <auxiliaries.h>
 #endif
 
+//TODO: set volatile to local variables and then set then back at end of function
 // Sync is achieved when the whole pattern is traversed
 inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
   
