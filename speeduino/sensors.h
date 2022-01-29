@@ -38,6 +38,9 @@ volatile byte flexCounter = 0;
 volatile unsigned long flexStartTime;
 volatile unsigned long flexPulseWidth;
 
+volatile uint16_t swfMAPlastInterval = 0;
+volatile uint32_t swfMAPlastTime = 0;
+
 #if defined(CORE_AVR)
   #define READ_FLEX() ((*flex_pin_port & flex_pin_mask) ? true : false)
 #else
@@ -78,6 +81,7 @@ void initialiseADC();
 void readTPS(bool=true); //Allows the option to override the use of the filter
 void readO2_2();
 void flexPulse();
+void swfMAPpulse();
 uint32_t vssGetPulseGap(byte);
 void vssPulse();
 uint16_t getSpeed();

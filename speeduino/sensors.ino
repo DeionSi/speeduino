@@ -166,7 +166,7 @@ static inline void instanteneousMAPReading()
 
   unsigned int tempReading;
   //Instantaneous MAP readings
-  #if defined(ANALOG_ISR_MAP)
+  /*#if defined(ANALOG_ISR_MAP)
     tempReading = AnChannel[pinMAP-A0];
   #else
     tempReading = analogRead(pinMAP);
@@ -174,13 +174,18 @@ static inline void instanteneousMAPReading()
   #endif
   //Error checking
   if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
-  else { mapErrorCount = 0; }
+  else { mapErrorCount = 0; }*/
+
 
   //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
-  if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
-  else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
+  //if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
+  //else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
 
-  currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+
+  // Min freq 80hz = 6250us between triggers (two per hertz) = 0 kPa pressure
+  // Max freq 159hz = 3144,65us between triggers (two per hertz) = 101.6 kPa pressure
+  currentStatus.MAP = map(swfMAPlastInterval, 6250, 3145, 0, 102); //Get the current MAP value
+  //currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
   if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
   
   //Repeat for EMAP if it's enabled
@@ -736,6 +741,13 @@ void flexPulse()
   {
     flexStartTime = micros(); //Start pulse width measurement.
   }
+}
+
+void swfMAPpulse()
+{
+  uint32_t swfMAPcurrentTime = micros();
+  swfMAPlastInterval = swfMAPcurrentTime - swfMAPlastTime;
+  swfMAPlastTime = swfMAPcurrentTime;
 }
 
 /*
