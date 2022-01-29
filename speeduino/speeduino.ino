@@ -113,7 +113,7 @@ void setup()
  */
 void loop()
 {
-    setProfilingSignal(LOOP1, false);
+    setProfilingSignal(LOOP_start, false);
       mainLoopCount++;
       LOOP_TIMER = TIMER_mask;
 
@@ -234,11 +234,11 @@ void loop()
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
     readMAP();
-    setProfilingSignal(LOOP1, false);
-
+    setProfilingSignal(LOOP_start, false);
+    setProfilingSignal(LOOP_looptimers, false);
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
-      setProfilingSignal(LOOP2, false);
+      
       BIT_CLEAR(TIMER_mask, BIT_TIMER_15HZ);
       #if TPS_READ_FREQUENCY == 15
         readTPS(); //TPS reading to be performed every 32 loops (any faster and it can upset the TPSdot sampling time)
@@ -280,12 +280,10 @@ void loop()
 
       //And check whether the tooth log buffer is ready
       if(toothHistoryIndex > TOOTH_LOG_SIZE) { BIT_SET(currentStatus.status1, BIT_STATUS1_TOOTHLOG1READY); }
-      setProfilingSignal(LOOP2, false);
     }
     
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) //10 hertz
     {
-      setProfilingSignal(LOOP3, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_10HZ);
       //updateFullStatus();
       checkProgrammableIO();
@@ -299,11 +297,9 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_10HZ) { writeSDLogEntry(); }
       #endif
 
-      setProfilingSignal(LOOP3, false);
     }
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ)) //30 hertz
     {
-      setProfilingSignal(LOOP4, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_30HZ);
       //Most boost tends to run at about 30Hz, so placing it here ensures a new target time is fetched frequently enough
       boostControl();
@@ -322,13 +318,11 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
       #endif
       
-      setProfilingSignal(LOOP4, false);
     }
     
     
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_4HZ))
     {
-      setProfilingSignal(LOOP5, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_4HZ);
       //The IAT and CLT readings can be done less frequently (4 times per second)
       readCLT();
@@ -403,11 +397,9 @@ void loop()
         } //For loop going through each channel
       } //aux channels are enabled
 
-      setProfilingSignal(LOOP5, false);
     } //4Hz timer
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ)) //Once per second)
     {
-      setProfilingSignal(LOOP6, false);
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
       readBaro(); //Infrequent baro readings are not an issue.
       deferEEPROMWrites = false; //Reset the slow EEPROM writes flag so that EEPROM burns will return to normal speed. This is set true in NewComms whenever there is a large chunk write to prvent mega2560s halting due to excess EEPROM burn times. 
@@ -430,9 +422,9 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_1HZ) { writeSDLogEntry(); }
       #endif
 
-      setProfilingSignal(LOOP6, false);
     } //1Hz timer
-    setProfilingSignal(LOOP7, false);
+    setProfilingSignal(LOOP_looptimers, false);
+    setProfilingSignal(LOOP_idlefueladvance, false);
 
     if( (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_OL)
     || (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_CL)
@@ -441,17 +433,18 @@ void loop()
       idleControl(); //Run idlecontrol every loop for stepper idle.
     }
 
-    
     //VE and advance calculation were moved outside the sync/RPM check so that the fuel and ignition load value will be accurately shown when RPM=0
     currentStatus.VE1 = getVE1();
     currentStatus.VE = currentStatus.VE1; //Set the final VE value to be VE 1 as a default. This may be changed in the section below
 
-    //currentStatus.advance1 = getAdvance1();
-    //currentStatus.advance = currentStatus.advance1; //Set the final advance value to be advance 1 as a default. This may be changed in the section below
+    currentStatus.advance1 = getAdvance1();
+    currentStatus.advance = currentStatus.advance1; //Set the final advance value to be advance 1 as a default. This may be changed in the section below
 
     calculateSecondaryFuel();
-    //calculateSecondarySpark();
+    calculateSecondarySpark();
 
+    setProfilingSignal(LOOP_idlefueladvance, false);
+    setProfilingSignal(LOOP_mainloop_other, false);
 
     //Always check for sync
     //Main loop runs within this clause
@@ -482,7 +475,8 @@ void loop()
         }
       //END SETTING ENGINE STATUSES
       //-----------------------------------------------------------------------------------------------------
-
+      
+      setProfilingSignal(LOOP_mainloop_fuelcalcs, false);
       //Begin the fuel calculation
       //Calculate an injector pulsewidth from the VE
       currentStatus.corrections = correctionsFuel();
@@ -590,6 +584,9 @@ void loop()
         currentStatus.PW7 = currentStatus.PW1;
         currentStatus.PW8 = currentStatus.PW1;
       }
+
+setProfilingSignal(LOOP_mainloop_fuelcalcs, false);
+setProfilingSignal(LOOP_mainloop_injectiontiming, false);
 
       //***********************************************************************************************
       //BEGIN INJECTION TIMING
@@ -779,6 +776,10 @@ void loop()
           break;
       }
 
+
+setProfilingSignal(LOOP_mainloop_injectiontiming, false);
+setProfilingSignal(LOOP_mainloop_igncalcs, false);
+
       //***********************************************************************************************
       //| BEGIN IGNITION CALCULATIONS
 
@@ -808,6 +809,10 @@ void loop()
       //This only needs to be run if the advance figure has changed, otherwise the end teeth will still be the same
       //if( (configPage2.perToothIgn == true) && (lastToothCalcAdvance != currentStatus.advance) ) { triggerSetEndTeeth(); }
       if( (configPage2.perToothIgn == true) ) { triggerSetEndTeeth(); }
+
+
+setProfilingSignal(LOOP_mainloop_igncalcs, false);
+setProfilingSignal(LOOP_mainloop_fuelschedules, false);
 
       //***********************************************************************************************
       //| BEGIN FUEL SCHEDULES
@@ -1050,6 +1055,12 @@ void loop()
         }
 #endif
       }
+
+
+setProfilingSignal(LOOP_mainloop_fuelschedules, false);
+
+setProfilingSignal(LOOP_mainloop_ignschedules, false);
+
       //***********************************************************************************************
       //| BEGIN IGNITION SCHEDULES
       //Same as above, except for ignition
@@ -1292,6 +1303,9 @@ void loop()
 
       } //Ignition schedules on
 
+      
+setProfilingSignal(LOOP_mainloop_ignschedules, false);
+
       if ( (!BIT_CHECK(currentStatus.status3, BIT_STATUS3_RESET_PREVENT)) && (resetControl == RESET_CONTROL_PREVENT_WHEN_RUNNING) ) 
       {
         //Reset prevention is supposed to be on while the engine is running but isn't. Fix that.
@@ -1305,7 +1319,7 @@ void loop()
       BIT_CLEAR(currentStatus.status3, BIT_STATUS3_RESET_PREVENT);
     }
 
-    setProfilingSignal(LOOP7, false);
+    setProfilingSignal(LOOP_mainloop_other, false);
 } //loop()
 #endif //Unit test guard
 
@@ -1321,6 +1335,7 @@ void loop()
  */
 uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
 {
+  setProfilingSignal(PS_pwfunction, false);
   //Standard float version of the calculation
   //return (REQ_FUEL * (float)(VE/100.0) * (float)(MAP/100.0) * (float)(TPS/100.0) * (float)(corrections/100.0) + injOpen);
   //Note: The MAP and TPS portions are currently disabled, we use VE and corrections only
@@ -1378,6 +1393,7 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
       intermediate = 65535;  //Make sure this won't overflow when we convert to uInt. This means the maximum pulsewidth possible is 65.535mS
     }
   }
+  setProfilingSignal(PS_pwfunction, false);
   return (unsigned int)(intermediate);
 }
 

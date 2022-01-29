@@ -3,19 +3,22 @@
 
 enum PROFILING_SIGNAL : char {
   INIT,
-  LOOP1,
-  LOOP2,
-  LOOP3,
-  LOOP4,
-  LOOP5,
-  LOOP6,
-  LOOP7,
-  LOOP8,
+  LOOP_start,
+  LOOP_looptimers,
+  LOOP_idlefueladvance,
+  LOOP_mainloop_fuelcalcs,
+  LOOP_mainloop_injectiontiming,
+  LOOP_mainloop_igncalcs,
+  LOOP_mainloop_fuelschedules,
+  LOOP_mainloop_ignschedules,
+  LOOP_mainloop_other,
+  PS_pwfunction,
+  PS_correctionsFuel,
+  PS_docrankspeedcalcs,
   TRIGPRI,
   TRIGSEC,
   TRIGTER,
-  ONEMS,
-  END_OF_ENUM
+  ONEMS
 };
 
 void initiateProfilingPins();

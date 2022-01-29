@@ -30,6 +30,7 @@ There are 2 top level functions that call more detailed corrections for Fuel and
 #include "maths.h"
 #include "sensors.h"
 #include "src/PID_v1/PID_v1.h"
+#include "debug.hpp"
 
 long PID_O2, PID_output, PID_AFRTarget;
 /** Instance of the PID object in case that algorithm is used (Always instantiated).
@@ -70,6 +71,8 @@ This is the only function that should be called from anywhere outside the file
 */
 uint16_t correctionsFuel()
 {
+  setProfilingSignal(PS_correctionsFuel, false);
+
   #define MAX_CORRECTIONS 3 //The maximum number of corrections allowed before the sum is reprocessed
   uint32_t sumCorrections = 100;
   byte activeCorrections = 0;
@@ -137,7 +140,9 @@ uint16_t correctionsFuel()
   sumCorrections = sumCorrections / powint(100,activeCorrections);
 
   if(sumCorrections > 1500) { sumCorrections = 1500; } //This is the maximum allowable increase during cranking
+  setProfilingSignal(PS_correctionsFuel, false);
   return (uint16_t)sumCorrections;
+
 }
 
 /*

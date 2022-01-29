@@ -1336,7 +1336,7 @@ void setPinMapping(byte boardID)
       pinFan = 47; //Pin for the fan output (Goes to ULN2803)
       pinLaunch = 51; //Can be overwritten below
       pinFlex = 2; // Flex sensor (Must be external interrupt enabled)
-      pinResetControl = 1; //Reset control output
+      pinResetControl = 43; //Reset control output
       pinBaro = A5;
       pinVSS = 20;
       pinWMIEmpty = 46;
