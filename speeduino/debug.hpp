@@ -2,6 +2,12 @@
 #define DEBUG_HPP
 
 enum PROFILING_SIGNAL : char {
+  //Interrupts
+  TRIGPRI,
+  TRIGSEC,
+  TRIGTER,
+  ONEMS,
+  //Remaining
   INIT,
   LOOP_start,
   LOOP_looptimers,
@@ -14,11 +20,7 @@ enum PROFILING_SIGNAL : char {
   LOOP_mainloop_other,
   PS_pwfunction,
   PS_correctionsFuel,
-  PS_docrankspeedcalcs,
-  TRIGPRI,
-  TRIGSEC,
-  TRIGTER,
-  ONEMS
+  PS_docrankspeedcalcs
 };
 
 void initiateProfilingPins();

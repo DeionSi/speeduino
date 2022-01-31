@@ -1,0 +1,3 @@
+& "C:\Program Files\sigrok\sigrok-cli\sigrok-cli.exe" -i raw_binary_logic_data -I binary -P parallel:clock_edge=either:d0=0:d1=1:d2=2:d3=3:d4=4:d5=5:d6=6:clk=7 --protocol-decoder-samplenum > sigrok_output.txt
+
+& "C:\Program Files\sigrok\sigrok-cli\sigrok-cli.exe" -d fx2lafw --config samplerate=2m --samples=1m -P parallel:clock_edge=either:d0=D0:d1=D1:d2=D2:d3=D3:d4=D4:d5=D5:d6=D6:clk=D7 --protocol-decoder-samplenum > sigrok_output.txt
