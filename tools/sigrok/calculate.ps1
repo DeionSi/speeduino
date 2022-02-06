@@ -1,6 +1,7 @@
 # Assemble array of code segments for storing results
 $segmentNamesInterrupts = @("TRIGPRI","TRIGSEC","TRIGTER","ONEMS")
 $segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs")
+$segmentStart = "LOOP_start"
 $signalToSegment = $segmentNamesInterrupts + $segmentNamesNonInterrupts;
 
 # Read input data
@@ -8,11 +9,23 @@ $sigrok_output = Get-Content sigrok_output.txt
 [System.Collections.ArrayList]$framesignals = @()
 $sigrok_output -replace '^(\d+)-\d+ parallel-\d+: (.*)$','$1,$2' | % { $split = $_ -split ','; $framesignals += [pscustomobject] @{frame = [int32] $split[0]; signal=[Int16] ("0x"+$split[1])} }
 
-# Remove all single signals and all double interrupt signals, we need to make sure we start with the opening signal of a non interrupt segment
-while ($framesignals.count -gt 0) {
-    if ($framesignals[0].signal -eq $framesignals[1].signal -and $framesignals[0].signal -ge $segmentNamesInterrupts.Count) { break }
+# Make sure we start with a specific "root" segment
+while ($framesignals.count -gt 1) {
+    if ($framesignals[0].signal -eq $framesignals[1].signal -and $framesignals[0].signal -eq $signalToSegment.IndexOf($segmentStart) ) { break }
     else { $framesignals.RemoveAt(0) }
 }
+# Make sure we end with a specific "root" segment
+while ($framesignals.count -gt 1) {
+    if ($framesignals[$framesignals.count-1].signal -eq $framesignals[$framesignals.count-2].signal -and $framesignals[$framesignals.count-1].signal -eq $signalToSegment.IndexOf($segmentStart) ) { break }
+    else { $framesignals.RemoveAt($framesignals.count-1) }
+}
+
+if ($framesignals.count -lt 2) {
+    Write-error "Not enough data"
+    exit
+}
+
+Write-Output "Using $($framesignals.count) samples"
 
 # For total duration percentage calcalations
 $startFrame = $framesignals[0].Frame
@@ -24,6 +37,7 @@ $cbCurrent = -1
 
 # Output table
 [System.Collections.ArrayList]$segments = @()
+[System.Collections.ArrayList]$segmentsOut = @()
 
 foreach($fs in $framesignals)
 {
@@ -38,25 +52,35 @@ foreach($fs in $framesignals)
 
         # Add to the segment connected to this codeblock
         $cb[$cbCurrent].segment.count += 1
-        $cb[$cbCurrent].segment.duration += $cbDuration
-        $cb[$cbCurrent].segment.childrenduration += $cb[$cbCurrent].childrenTime
+        $cb[$cbCurrent].segment.duration += $cbDuration - $cb[$cbCurrent].interruptDuration
+        $cb[$cbCurrent].segment.childrenDuration += $cb[$cbCurrent].childrenDuration
 
-        # If this codeblock has a parent, add to it
-        if ($cb[$cbCurrent].segment.parent -ne $null) {
-            $cb[$cbCurrent-1].childrenTime += $cbDuration
+        # If this segment has a parent, add to it
+        if ( $cb[$cbCurrent].segment.parent -ne $null ) {
+            $cb[$cbCurrent-1].childrenDuration += $cbDuration - $cb[$cbCurrent].interruptDuration
+            $cb[$cbCurrent-1].interruptDuration += $cb[$cbCurrent].interruptDuration
+        }
+        # If it doesn't it might be an interrupt which we need to take into account
+        elseif ( $cb[$cbCurrent].segment.parent -eq $null -and $cbCurrent -gt -0 ) {
+            $cb[$cbCurrent-1].interruptDuration += $cbDuration
         }
 
         # Remove this handled codeblock
         $cb.RemoveAt($cbCurrent)
         $cbCurrent--
 
-        # Capture the frame (time) of the last closed segment for total duration calculation
-        $endFrame = $fs.Frame
+        # Only write output after root function has been found. This prevent children getting counted when parent isn't at end of file
+        if ($cbCurrent -eq -1) {
+            # "Deep copy" meaning every object and reference gets duplicated
+            $segmentsOut = [Management.Automation.PSSerializer]::DeSerialize([Management.Automation.PSSerializer]::Serialize($segments))
+            # Capture the frame (time) of the last closed segment for total duration calculation
+            $endFrame = $fs.Frame
+        }
     }
     else { # We are in a new code block
         
         # Add the new code block
-        $cb += [pscustomobject] @{ name=$segmentName; startFrame=$fs.Frame; childrenTime=0; segment=$null }
+        $cb += [pscustomobject] @{ name=$segmentName; startFrame=$fs.Frame; childrenDuration=0; interruptDuration=0; segment=$null }
         $cbCurrent++;
 
         # Find in which list to check-or-add the code block
@@ -112,7 +136,7 @@ function parseList {
     }
 }
 
-parseList -segments $segments -hierarchyLevel 0
+parseList -segments $segmentsOut -hierarchyLevel 0
 
 $outputList | Format-Table
 
