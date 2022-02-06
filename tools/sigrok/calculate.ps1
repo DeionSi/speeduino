@@ -129,15 +129,17 @@ function parseList {
 
     $hierarchyLevel++
 
-    $segmentsIn = $segmentsIn | select-object name,duration,@{Name = 'PercentageDecimalTotal';Expression={($_.duration/$totalDuration)}},childrenduration,@{Name = 'PercentageDecimalExclChildren';Expression={(($_.duration-$_.childrenduration)/$totalDuration)}},children,count
+    $segmentsDuration = $segmentsIn | Measure-Object -sum duration | Select-Object Sum
 
-    $segmentsIn = $segmentsIn | Sort-Object -Property PercentageDecimalTotal -Descending
+    $segmentsIn = $segmentsIn | select-object name,duration,@{Name = 'PercentageOfTotalDecimal';Expression={($_.duration/$totalDuration)}},childrenduration,@{Name = 'PercentageOfSegmentDecimal';Expression={(($_.duration)/$segmentsDuration.Sum)}},children,count
+
+    $segmentsIn = $segmentsIn | Sort-Object -Property PercentageOfTotalDecimal -Descending
 
     Foreach ($segmentIn in $segmentsIn) {
         $output = $segmentIn
-        $output = $output | Select-object -Property *,@{Name = 'PercentageTotal';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalTotal.ToString("P"))}}
-        $output = $output | Select-object -Property *,@{Name = 'PercentageExclChildren';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalExclChildren.ToString("P"))}}
-        $output = $output | Select-object -Property name,PercentageTotal,PercentageExclChildren,count
+        $output = $output | Select-object -Property *,@{Name = 'PercentageOfTotal';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageOfTotalDecimal.ToString("P"))}}
+        $output = $output | Select-object -Property *,@{Name = 'PercentageOfSegment';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageOfSegmentDecimal.ToString("P"))}}
+        $output = $output | Select-object -Property name,PercentageOfTotal,PercentageOfSegment,count
         [void]$outputList.Add( $output )
 
         if ($segmentIn.children.Count -gt 1) {
@@ -153,3 +155,5 @@ $outputList | Format-Table
 
 $totalDuration
 $segmentsOut | Measure-Object -sum duration | Select-Object Sum
+
+# PercentageOfTotal and PercentageOfSegment does not match, there is an error somewhere
