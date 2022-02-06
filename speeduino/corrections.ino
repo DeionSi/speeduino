@@ -71,7 +71,7 @@ This is the only function that should be called from anywhere outside the file
 */
 uint16_t correctionsFuel()
 {
-  setProfilingSignal(PS_correctionsFuel, false);
+  setProfilingSignal(PS_correctionsFuel);
 
   #define MAX_CORRECTIONS 3 //The maximum number of corrections allowed before the sum is reprocessed
   uint32_t sumCorrections = 100;
@@ -140,7 +140,7 @@ uint16_t correctionsFuel()
   sumCorrections = sumCorrections / powint(100,activeCorrections);
 
   if(sumCorrections > 1500) { sumCorrections = 1500; } //This is the maximum allowable increase during cranking
-  setProfilingSignal(PS_correctionsFuel, false);
+  setProfilingSignal(PS_correctionsFuel);
   return (uint16_t)sumCorrections;
 
 }

@@ -90,7 +90,7 @@ uint16_t timeToAngle(unsigned long time, byte method)
 
 void doCrankSpeedCalcs()
 {
-  setProfilingSignal(PS_docrankspeedcalcs, false);
+  setProfilingSignal(PS_docrankspeedcalcs);
      //********************************************************
       //How fast are we going? Need to know how long (uS) it will take to get from one tooth to the next. We then use that to estimate how far we are between the last tooth and the next one
       //We use a 1st Deriv accleration prediction, but only when there is an even spacing between primary sensor teeth
@@ -156,5 +156,5 @@ void doCrankSpeedCalcs()
       }
       degreesPeruSx2048 = 2048 / timePerDegree;
       degreesPeruSx32768 = 524288 / timePerDegreex16;
-  setProfilingSignal(PS_docrankspeedcalcs, false);
+  setProfilingSignal(PS_docrankspeedcalcs);
 }

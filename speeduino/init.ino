@@ -3277,4 +3277,7 @@ void initialiseTriggers()
   
   detachInterrupt( triggerInterrupt3 );
   attachInterrupt( triggerInterrupt3, profilingTertriaryTrigger, primaryTriggerEdge );
+
+  getCrankAngleReal = getCrankAngle;
+  getCrankAngle = profilingGetCrankAngle;
 }

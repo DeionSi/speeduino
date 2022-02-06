@@ -1,13 +1,12 @@
 # Assemble array of code segments for storing results
 $segmentNamesInterrupts = @("TRIGPRI","TRIGSEC","TRIGTER","ONEMS")
-$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs")
+$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs","PS_getCrankAngle")
 $segmentStart = "LOOP_start"
 $signalToSegment = $segmentNamesInterrupts + $segmentNamesNonInterrupts;
 
 # Read input data
 $sigrok_output = Get-Content sigrok_output.txt
-[System.Collections.ArrayList]$framesignals = @()
-$sigrok_output -replace '^(\d+)-\d+ parallel-\d+: (.*)$','$1,$2' | % { $split = $_ -split ','; $framesignals += [pscustomobject] @{frame = [int32] $split[0]; signal=[Int16] ("0x"+$split[1])} }
+[System.Collections.ArrayList]$framesignals = $sigrok_output -replace '^(\d+)-\d+ parallel-\d+: (.*)$','$1,$2' | % { $split = $_ -split ','; [pscustomobject] @{frame = [int32] $split[0]; signal=[Int16] ("0x"+$split[1])} }
 
 # Make sure we start with a specific "root" segment
 while ($framesignals.count -gt 1) {
@@ -118,16 +117,16 @@ function parseList {
 
     $hierarchyLevel++
 
-    $segmentsIn = $segmentsIn | select-object name,duration,@{Name = 'PercentageDecimalTotal';Expression={($_.duration/$totalTime)}},childrenduration,@{Name = 'PercentageDecimalExclChildren';Expression={(($_.duration-$_.childrenduration)/$totalTime)}},children,count
+    $segmentsIn = $segmentsIn | select-object name,duration,@{Name = 'PercentageDecimalTotal';Expression={($_.duration/$totalDuration)}},childrenduration,@{Name = 'PercentageDecimalExclChildren';Expression={(($_.duration-$_.childrenduration)/$totalDuration)}},children,count
 
     $segmentsIn = $segmentsIn | Sort-Object -Property PercentageDecimalTotal -Descending
 
     Foreach ($segmentIn in $segmentsIn) {
         $Global:totalDurationInProfiling += $segmentIn.duration - $segmentIn.childrenduration
         $output = $segmentIn
-        $output = $output | Select-object -Property *,@{Name = 'PercentageTotal';Expression={($_.PercentageDecimalTotal.ToString("P"))}}
-        $output = $output | Select-object -Property *,@{Name = 'PercentageExclChildren';Expression={($_.PercentageDecimalExclChildren.ToString("P"))}}
-        #$output = $output | Select-object -Property name,PercentageTotal,PercentageExclChildren,count
+        $output = $output | Select-object -Property *,@{Name = 'PercentageTotal';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalTotal.ToString("P"))}}
+        $output = $output | Select-object -Property *,@{Name = 'PercentageExclChildren';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalExclChildren.ToString("P"))}}
+        $output = $output | Select-object -Property name,PercentageTotal,PercentageExclChildren,count
         [void]$outputList.Add( $output )
 
         $segmentIn.children | ForEach { $_.name = " " * 2 * $hierarchyLevel + $_.name }

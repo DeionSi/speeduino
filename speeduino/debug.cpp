@@ -2,10 +2,12 @@
 #include <arduino.h>
 #include "globals.h"
 #include "decoders.h"
+#include <util/atomic.h>
 
 const byte rts_pin = 29;
 volatile uint8_t * rts_pin_port;
 volatile uint8_t rts_pin_mask;
+int (*getCrankAngleReal)();
 
 void initiateProfilingPins() {
   pinMode(rts_pin, OUTPUT); // enable port
@@ -25,36 +27,43 @@ void initiateProfilingPins() {
 }
 
 void profilingPrimaryTrigger() {
-  setProfilingSignal(TRIGPRI, true);
+  setProfilingSignal(TRIGPRI);
   triggerHandler();
-  setProfilingSignal(TRIGPRI, true);
+  setProfilingSignal(TRIGPRI);
 }
 
 void profilingSecondaryTrigger() {
-  setProfilingSignal(TRIGSEC, true);
+  setProfilingSignal(TRIGSEC);
   triggerSecondaryHandler();
-  setProfilingSignal(TRIGSEC, true);
+  setProfilingSignal(TRIGSEC);
 }
 
 void profilingTertriaryTrigger() {
-  setProfilingSignal(TRIGTER, true);
+  setProfilingSignal(TRIGTER);
   triggerTertiaryHandler();
-  setProfilingSignal(TRIGTER, true);
+  setProfilingSignal(TRIGTER);
 }
 
-void setProfilingSignal(PROFILING_SIGNAL signal, bool inInterrupt) {
-  noInterrupts();
+int profilingGetCrankAngle() {
+  setProfilingSignal(PS_getCrankAngle);
+  int crankAngle = getCrankAngleReal();
+  setProfilingSignal(PS_getCrankAngle);
+  return crankAngle;
+}
 
-  // Set which signal
-  PORTC = signal;
+void setProfilingSignal(PROFILING_SIGNAL signal) {
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 
-  // Say that the signal changed
-  if (*rts_pin_port & rts_pin_mask) {
-    *rts_pin_port &= ~(rts_pin_mask);
+    // Set which signal
+    PORTC = signal;
+
+    // Say that the signal changed
+    if (*rts_pin_port & rts_pin_mask) {
+      *rts_pin_port &= ~(rts_pin_mask);
+    }
+    else {
+      *rts_pin_port |= (rts_pin_mask);
+    }
+
   }
-  else {
-    *rts_pin_port |= (rts_pin_mask);
-  }
-
-  if (!inInterrupt) { interrupts(); }
 }

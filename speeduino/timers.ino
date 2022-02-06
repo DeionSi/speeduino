@@ -44,7 +44,7 @@ ISR(TIMER2_OVF_vect, ISR_NOBLOCK) //This MUST be no block. Turning NO_BLOCK off 
 void oneMSInterval() //Most ARM chips can simply call a function
 #endif
 {
-  setProfilingSignal(PROFILING_SIGNAL::ONEMS, true);
+  setProfilingSignal(PROFILING_SIGNAL::ONEMS);
   ms_counter++;
 
   //Increment Loop Counters
@@ -272,6 +272,6 @@ void oneMSInterval() //Most ARM chips can simply call a function
     TCNT2 = 131;            //Preload timer2 with 100 cycles, leaving 156 till overflow.
 #endif
 
-  setProfilingSignal(PROFILING_SIGNAL::ONEMS, true);
+  setProfilingSignal(PROFILING_SIGNAL::ONEMS);
 }
 

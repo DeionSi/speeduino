@@ -20,13 +20,16 @@ enum PROFILING_SIGNAL : char {
   LOOP_mainloop_other,
   PS_pwfunction,
   PS_correctionsFuel,
-  PS_docrankspeedcalcs
+  PS_docrankspeedcalcs,
+  PS_getCrankAngle
 };
 
 void initiateProfilingPins();
-void setProfilingSignal(PROFILING_SIGNAL signal, bool inInterrupt);
+void setProfilingSignal(PROFILING_SIGNAL signal);
 void profilingPrimaryTrigger();
 void profilingSecondaryTrigger();
 void profilingTertriaryTrigger();
+extern int (*getCrankAngleReal)();
+int profilingGetCrankAngle();
 
 #endif

@@ -88,12 +88,12 @@ uint16_t staged_req_fuel_mult_sec = 0;
 void setup()
 {
   initiateProfilingPins();
-  setProfilingSignal(INIT, false);
+  setProfilingSignal(INIT);
 
   initialisationComplete = false; //Tracks whether the initialiseAll() function has run completely
   initialiseAll();
   
-  setProfilingSignal(INIT, false);
+  setProfilingSignal(INIT);
 }
 /** Speeduino main loop.
  * 
@@ -113,7 +113,7 @@ void setup()
  */
 void loop()
 {
-    setProfilingSignal(LOOP_start, false);
+    setProfilingSignal(LOOP_start);
       mainLoopCount++;
       LOOP_TIMER = TIMER_mask;
 
@@ -234,8 +234,8 @@ void loop()
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
     readMAP();
-    setProfilingSignal(LOOP_start, false);
-    setProfilingSignal(LOOP_looptimers, false);
+    setProfilingSignal(LOOP_start);
+    setProfilingSignal(LOOP_looptimers);
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
       
@@ -423,8 +423,8 @@ void loop()
       #endif
 
     } //1Hz timer
-    setProfilingSignal(LOOP_looptimers, false);
-    setProfilingSignal(LOOP_idlefueladvance, false);
+    setProfilingSignal(LOOP_looptimers);
+    setProfilingSignal(LOOP_idlefueladvance);
 
     if( (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_OL)
     || (configPage6.iacAlgorithm == IAC_ALGORITHM_STEP_CL)
@@ -443,8 +443,8 @@ void loop()
     calculateSecondaryFuel();
     calculateSecondarySpark();
 
-    setProfilingSignal(LOOP_idlefueladvance, false);
-    setProfilingSignal(LOOP_mainloop_other, false);
+    setProfilingSignal(LOOP_idlefueladvance);
+    setProfilingSignal(LOOP_mainloop_other);
 
     //Always check for sync
     //Main loop runs within this clause
@@ -476,7 +476,7 @@ void loop()
       //END SETTING ENGINE STATUSES
       //-----------------------------------------------------------------------------------------------------
       
-      setProfilingSignal(LOOP_mainloop_fuelcalcs, false);
+      setProfilingSignal(LOOP_mainloop_fuelcalcs);
       //Begin the fuel calculation
       //Calculate an injector pulsewidth from the VE
       currentStatus.corrections = correctionsFuel();
@@ -585,8 +585,8 @@ void loop()
         currentStatus.PW8 = currentStatus.PW1;
       }
 
-setProfilingSignal(LOOP_mainloop_fuelcalcs, false);
-setProfilingSignal(LOOP_mainloop_injectiontiming, false);
+setProfilingSignal(LOOP_mainloop_fuelcalcs);
+setProfilingSignal(LOOP_mainloop_injectiontiming);
 
       //***********************************************************************************************
       //BEGIN INJECTION TIMING
@@ -777,8 +777,8 @@ setProfilingSignal(LOOP_mainloop_injectiontiming, false);
       }
 
 
-setProfilingSignal(LOOP_mainloop_injectiontiming, false);
-setProfilingSignal(LOOP_mainloop_igncalcs, false);
+setProfilingSignal(LOOP_mainloop_injectiontiming);
+setProfilingSignal(LOOP_mainloop_igncalcs);
 
       //***********************************************************************************************
       //| BEGIN IGNITION CALCULATIONS
@@ -811,8 +811,8 @@ setProfilingSignal(LOOP_mainloop_igncalcs, false);
       if( (configPage2.perToothIgn == true) ) { triggerSetEndTeeth(); }
 
 
-setProfilingSignal(LOOP_mainloop_igncalcs, false);
-setProfilingSignal(LOOP_mainloop_fuelschedules, false);
+setProfilingSignal(LOOP_mainloop_igncalcs);
+setProfilingSignal(LOOP_mainloop_fuelschedules);
 
       //***********************************************************************************************
       //| BEGIN FUEL SCHEDULES
@@ -1057,9 +1057,9 @@ setProfilingSignal(LOOP_mainloop_fuelschedules, false);
       }
 
 
-setProfilingSignal(LOOP_mainloop_fuelschedules, false);
+setProfilingSignal(LOOP_mainloop_fuelschedules);
 
-setProfilingSignal(LOOP_mainloop_ignschedules, false);
+setProfilingSignal(LOOP_mainloop_ignschedules);
 
       //***********************************************************************************************
       //| BEGIN IGNITION SCHEDULES
@@ -1304,7 +1304,7 @@ setProfilingSignal(LOOP_mainloop_ignschedules, false);
       } //Ignition schedules on
 
       
-setProfilingSignal(LOOP_mainloop_ignschedules, false);
+setProfilingSignal(LOOP_mainloop_ignschedules);
 
       if ( (!BIT_CHECK(currentStatus.status3, BIT_STATUS3_RESET_PREVENT)) && (resetControl == RESET_CONTROL_PREVENT_WHEN_RUNNING) ) 
       {
@@ -1319,7 +1319,7 @@ setProfilingSignal(LOOP_mainloop_ignschedules, false);
       BIT_CLEAR(currentStatus.status3, BIT_STATUS3_RESET_PREVENT);
     }
 
-    setProfilingSignal(LOOP_mainloop_other, false);
+    setProfilingSignal(LOOP_mainloop_other);
 } //loop()
 #endif //Unit test guard
 
@@ -1335,7 +1335,7 @@ setProfilingSignal(LOOP_mainloop_ignschedules, false);
  */
 uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
 {
-  setProfilingSignal(PS_pwfunction, false);
+  setProfilingSignal(PS_pwfunction);
   //Standard float version of the calculation
   //return (REQ_FUEL * (float)(VE/100.0) * (float)(MAP/100.0) * (float)(TPS/100.0) * (float)(corrections/100.0) + injOpen);
   //Note: The MAP and TPS portions are currently disabled, we use VE and corrections only
@@ -1393,7 +1393,7 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
       intermediate = 65535;  //Make sure this won't overflow when we convert to uInt. This means the maximum pulsewidth possible is 65.535mS
     }
   }
-  setProfilingSignal(PS_pwfunction, false);
+  setProfilingSignal(PS_pwfunction);
   return (unsigned int)(intermediate);
 }
 
