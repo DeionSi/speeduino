@@ -29,6 +29,7 @@ Write-Output "Using $($framesignals.count) samples"
 # For total duration percentage calcalations
 $startFrame = $framesignals[0].Frame
 $endFrame = 0
+$rootOtherStartFrame = 0;
 
 # cb = code block
 $cbCurrent = -1
@@ -36,27 +37,30 @@ $cbCurrent = -1
 
 # Output table
 [System.Collections.ArrayList]$segments = @()
+[void]$segments.Add( [pscustomobject] @{ name="other"; duration=0; childrenduration=0; children = [System.Collections.ArrayList] @(); parent=$null; count=0 } )
 [System.Collections.ArrayList]$segmentsOut = @()
 
 foreach($fs in $framesignals)
 {
     if ($fs.signal -ge $signalToSegment.Count) { Write-Error "Bad input data"; exit }
     $segmentName = $signalToSegment[$fs.signal]
-    
 
     if ( $cbCurrent -gt -1 -and $segmentName -eq $cb[$cbCurrent].name) { # We are ending an open codeblock
         
         # Duration of this codeblock
-        $cbDuration = $fs.Frame - $cb[$cbCurrent].startFrame
+        $cbDuration = $fs.Frame - $cb[$cbCurrent].startFrame - $cb[$cbCurrent].interruptDuration
 
         # Add to the segment connected to this codeblock
-        $cb[$cbCurrent].segment.count += 1
-        $cb[$cbCurrent].segment.duration += $cbDuration - $cb[$cbCurrent].interruptDuration
+        $cb[$cbCurrent].segment.count++
+        $cb[$cbCurrent].segment.duration += $cbDuration
         $cb[$cbCurrent].segment.childrenDuration += $cb[$cbCurrent].childrenDuration
+
+        # Add non children time to other
+        $cb[$cbCurrent].segment.children[0].duration += $cbDuration - $cb[$cbCurrent].childrenDuration
 
         # If this segment has a parent, add to it
         if ( $cb[$cbCurrent].segment.parent -ne $null ) {
-            $cb[$cbCurrent-1].childrenDuration += $cbDuration - $cb[$cbCurrent].interruptDuration
+            $cb[$cbCurrent-1].childrenDuration += $cbDuration
             $cb[$cbCurrent-1].interruptDuration += $cb[$cbCurrent].interruptDuration
         }
         # If it doesn't it might be an interrupt which we need to take into account
@@ -74,10 +78,18 @@ foreach($fs in $framesignals)
             $segmentsOut = [Management.Automation.PSSerializer]::DeSerialize([Management.Automation.PSSerializer]::Serialize($segments))
             # Capture the frame (time) of the last closed segment for total duration calculation
             $endFrame = $fs.Frame
+
+            $rootOtherStartFrame = $fs.Frame
         }
     }
     else { # We are in a new code block
         
+        if ($rootOtherStartFrame -gt 0) {
+            $segments[0].duration += $fs.frame - $rootOtherStartFrame
+            $segments[0].count++
+            $rootOtherStartFrame = 0;
+        }
+
         # Add the new code block
         $cb += [pscustomobject] @{ name=$segmentName; startFrame=$fs.Frame; childrenDuration=0; interruptDuration=0; segment=$null }
         $cbCurrent++;
@@ -95,7 +107,8 @@ foreach($fs in $framesignals)
 
         # Make sure segment is in the list
         if ( $segmentList.name -notcontains $segmentName ) {
-            [void]$segmentList.Add( [pscustomobject] @{ name=$segmentName; duration=0; childrenduration=0; children = [System.Collections.ArrayList] @(); parent=$parent; count=0 } )
+            $added = $segmentList.Add( [pscustomobject] @{ name=$segmentName; duration=0; childrenduration=0; children = [System.Collections.ArrayList] @(); parent=$parent; count=0 } )
+            [void]$segmentList[$added].children.Add( [pscustomobject] @{ name="other"; duration=0; childrenduration=0; children = [System.Collections.ArrayList] @(); parent=$segmentList[$added]; count=0 } )
         }
 
         # Store a reference to the target segment
@@ -108,7 +121,6 @@ foreach($fs in $framesignals)
 
 # Prepare the result
 $totalDuration = $endFrame - $startFrame
-$totalDurationInProfiling = 0
 
 [System.Collections.ArrayList]$outputList = @()
 
@@ -122,16 +134,16 @@ function parseList {
     $segmentsIn = $segmentsIn | Sort-Object -Property PercentageDecimalTotal -Descending
 
     Foreach ($segmentIn in $segmentsIn) {
-        $Global:totalDurationInProfiling += $segmentIn.duration - $segmentIn.childrenduration
         $output = $segmentIn
         $output = $output | Select-object -Property *,@{Name = 'PercentageTotal';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalTotal.ToString("P"))}}
         $output = $output | Select-object -Property *,@{Name = 'PercentageExclChildren';Expression={" " * 2 * $hierarchyLevel + ($_.PercentageDecimalExclChildren.ToString("P"))}}
         $output = $output | Select-object -Property name,PercentageTotal,PercentageExclChildren,count
         [void]$outputList.Add( $output )
 
-        $segmentIn.children | ForEach { $_.name = " " * 2 * $hierarchyLevel + $_.name }
-
-        parseList -segments $segmentIn.children -hierarchyLevel $hierarchyLevel
+        if ($segmentIn.children.Count -gt 1) {
+            $segmentIn.children | ForEach { $_.name = " " * 2 * $hierarchyLevel + $_.name }
+            parseList -segments $segmentIn.children -hierarchyLevel $hierarchyLevel
+        }
     }
 }
 
@@ -139,5 +151,5 @@ parseList -segments $segmentsOut -hierarchyLevel 0
 
 $outputList | Format-Table
 
-$totalDurationInProfiling
 $totalDuration
+$segmentsOut | Measure-Object -sum duration | Select-Object Sum
