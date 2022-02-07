@@ -3,6 +3,11 @@
 #include "decoders.h"
 #include "timers.h"
 #include "debug.hpp"
+#include "src/libdivide/libdivide.h"
+
+#ifdef USE_LIBDIVIDE
+  struct libdivide::libdivide_u32_t libdiv_u32_360 = libdivide::libdivide_u32_gen(360);
+#endif
 
 /*
 * Converts a crank angle into a time from or since that angle occurred.
@@ -24,6 +29,7 @@ unsigned long angleToTime(int16_t angle, byte method)
     if( (method == CRANKMATH_METHOD_INTERVAL_REV) || (method == CRANKMATH_METHOD_INTERVAL_DEFAULT) )
     {
         returnTime = ((angle * revolutionTime) / 360);
+        //returnTime = angle * libdivide::libdivide_u32_do(revolutionTime, &libdiv_u32_360);
         //returnTime = angle * (unsigned long)timePerDegree;
     }
     else if (method == CRANKMATH_METHOD_INTERVAL_TOOTH)
