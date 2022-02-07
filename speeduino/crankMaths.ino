@@ -18,6 +18,7 @@
 */
 unsigned long angleToTime(int16_t angle, byte method)
 {
+  setProfilingSignal(PS_angleToTime);
     unsigned long returnTime = 0;
 
     if( (method == CRANKMATH_METHOD_INTERVAL_REV) || (method == CRANKMATH_METHOD_INTERVAL_DEFAULT) )
@@ -39,6 +40,7 @@ unsigned long angleToTime(int16_t angle, byte method)
         else { returnTime = angleToTime(angle, CRANKMATH_METHOD_INTERVAL_REV); } //Safety check. This can occur if the last tooth seen was outside the normal pattern etc
     }
 
+  setProfilingSignal(PS_angleToTime);
     return returnTime;
 }
 
@@ -52,6 +54,7 @@ unsigned long angleToTime(int16_t angle, byte method)
 */
 uint16_t timeToAngle(unsigned long time, byte method)
 {
+  setProfilingSignal(PS_timeToAngle);
     uint16_t returnAngle = 0;
 
     if( (method == CRANKMATH_METHOD_INTERVAL_REV) || (method == CRANKMATH_METHOD_INTERVAL_DEFAULT) )
@@ -84,6 +87,7 @@ uint16_t timeToAngle(unsigned long time, byte method)
         returnAngle = timeToAngle(time, CRANKMATH_METHOD_INTERVAL_REV);
     }
 
+  setProfilingSignal(PS_timeToAngle);
    return returnAngle;
     
 }

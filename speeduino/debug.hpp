@@ -21,7 +21,9 @@ enum PROFILING_SIGNAL : char {
   PS_pwfunction,
   PS_correctionsFuel,
   PS_docrankspeedcalcs,
-  PS_getCrankAngle
+  PS_getCrankAngle,
+  PS_angleToTime,
+  PS_timeToAngle
 };
 
 void initiateProfilingPins();

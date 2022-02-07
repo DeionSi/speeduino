@@ -1,10 +1,11 @@
 # Assemble array of code segments for storing results
 $segmentNamesInterrupts = @("TRIGPRI","TRIGSEC","TRIGTER","ONEMS")
-$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs","PS_getCrankAngle")
+$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs","PS_getCrankAngle","PS_angleToTime","PS_timeToAngle")
 $segmentStart = "LOOP_start"
 $signalToSegment = $segmentNamesInterrupts + $segmentNamesNonInterrupts;
 
 # Read input data
+& "C:\Program Files\sigrok\sigrok-cli\sigrok-cli.exe" -d fx2lafw --config samplerate=2m --samples=1m -P parallel:clock_edge=either:d0=D0:d1=D1:d2=D2:d3=D3:d4=D4:d5=D5:d6=D6:clk=D7 --protocol-decoder-samplenum > sigrok_output.txt
 $sigrok_output = Get-Content sigrok_output.txt
 [System.Collections.ArrayList]$framesignals = $sigrok_output -replace '^(\d+)-\d+ parallel-\d+: (.*)$','$1,$2' | % { $split = $_ -split ','; [pscustomobject] @{frame = [int32] $split[0]; signal=[Int16] ("0x"+$split[1])} }
 
@@ -57,6 +58,7 @@ foreach($fs in $framesignals)
 
         # Add non children time to other
         $cb[$cbCurrent].segment.children[0].duration += $cbDuration - $cb[$cbCurrent].childrenDuration
+        $cb[$cbCurrent].segment.children[0].count++
 
         # If this segment has a parent, add to it
         if ( $cb[$cbCurrent].segment.parent -ne $null ) {
@@ -153,7 +155,7 @@ parseList -segments $segmentsOut -hierarchyLevel 0
 
 $outputList | Format-Table
 
-$totalDuration
-$segmentsOut | Measure-Object -sum duration | Select-Object Sum
+#$totalDuration
+#$segmentsOut | Measure-Object -sum duration | Select-Object Sum
 
 # PercentageOfTotal and PercentageOfSegment does not match, there is an error somewhere
