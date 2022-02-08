@@ -3273,10 +3273,12 @@ void initialiseTriggers()
   attachInterrupt( triggerInterrupt, profilingPrimaryTrigger, primaryTriggerEdge );
   
   detachInterrupt( triggerInterrupt2 );
-  attachInterrupt( triggerInterrupt2, profilingSecondaryTrigger, primaryTriggerEdge );
+  attachInterrupt( triggerInterrupt2, profilingSecondaryTrigger, secondaryTriggerEdge );
   
-  detachInterrupt( triggerInterrupt3 );
-  attachInterrupt( triggerInterrupt3, profilingTertriaryTrigger, primaryTriggerEdge );
+  if (configPage10.vvt2Enabled > 0) {
+    detachInterrupt( triggerInterrupt3 );
+    attachInterrupt( triggerInterrupt3, profilingTertriaryTrigger, tertiaryTriggerEdge );
+  }
 
   getCrankAngleReal = getCrankAngle;
   getCrankAngle = profilingGetCrankAngle;
