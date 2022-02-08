@@ -8,6 +8,7 @@ const byte rts_pin = 29;
 volatile uint8_t * rts_pin_port;
 volatile uint8_t rts_pin_mask;
 int (*getCrankAngleReal)();
+void (*triggerSetEndTeethReal)();
 
 void initiateProfilingPins() {
   pinMode(rts_pin, OUTPUT); // enable port
@@ -49,6 +50,12 @@ int profilingGetCrankAngle() {
   int crankAngle = getCrankAngleReal();
   setProfilingSignal(PS_getCrankAngle);
   return crankAngle;
+}
+
+void profilingTriggerSetEndTeeth() {
+  setProfilingSignal(PS_triggerSetEndTeeth);
+  triggerSetEndTeethReal();
+  setProfilingSignal(PS_triggerSetEndTeeth);
 }
 
 void setProfilingSignal(PROFILING_SIGNAL signal) {

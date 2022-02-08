@@ -1553,7 +1553,7 @@ void calculateIgnitionAngle8(int dwellAngle)
  */
 void calculateIgnitionAngles(int dwellAngle)
 {
-  
+  setProfilingSignal(PS_calculateIgnitionAngles);
 
   //This test for more cylinders and do the same thing
   switch (configPage2.nCylinders)
@@ -1640,4 +1640,6 @@ void calculateIgnitionAngles(int dwellAngle)
     default:
       break;
   }
+
+  setProfilingSignal(PS_calculateIgnitionAngles);
 }

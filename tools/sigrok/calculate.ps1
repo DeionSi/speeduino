@@ -1,6 +1,6 @@
 # Assemble array of code segments for storing results
 $segmentNamesInterrupts = @("TRIGPRI","TRIGSEC","TRIGTER","ONEMS")
-$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs","PS_getCrankAngle","PS_angleToTime","PS_timeToAngle")
+$segmentNamesNonInterrupts = @("INIT","LOOP_start","LOOP_looptimers","LOOP_idlefueladvance","LOOP_mainloop_fuelcalcs","LOOP_mainloop_injectiontiming","LOOP_mainloop_igncalcs","LOOP_mainloop_fuelschedules","LOOP_mainloop_ignschedules","LOOP_mainloop_other","PS_pwfunction","PS_correctionsFuel","PS_docrankspeedcalcs","PS_getCrankAngle","PS_angleToTime","PS_timeToAngle","PS_triggerSetEndTeeth","PS_calculateIgnitionAngles","PS_angleToTime_division")
 $segmentStart = "LOOP_start"
 $signalToSegment = $segmentNamesInterrupts + $segmentNamesNonInterrupts;
 

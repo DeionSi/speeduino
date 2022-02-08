@@ -3282,4 +3282,7 @@ void initialiseTriggers()
 
   getCrankAngleReal = getCrankAngle;
   getCrankAngle = profilingGetCrankAngle;
+
+  triggerSetEndTeethReal = triggerSetEndTeeth;
+  triggerSetEndTeeth = profilingTriggerSetEndTeeth;
 }

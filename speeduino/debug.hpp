@@ -23,7 +23,10 @@ enum PROFILING_SIGNAL : char {
   PS_docrankspeedcalcs,
   PS_getCrankAngle,
   PS_angleToTime,
-  PS_timeToAngle
+  PS_timeToAngle,
+  PS_triggerSetEndTeeth,
+  PS_calculateIgnitionAngles,
+  PS_angleToTime_division
 };
 
 void initiateProfilingPins();
@@ -33,5 +36,7 @@ void profilingSecondaryTrigger();
 void profilingTertriaryTrigger();
 extern int (*getCrankAngleReal)();
 int profilingGetCrankAngle();
+extern void (*triggerSetEndTeethReal)();
+void profilingTriggerSetEndTeeth();
 
 #endif
