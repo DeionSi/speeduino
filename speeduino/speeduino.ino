@@ -182,9 +182,10 @@ void loop()
           
     //Displays currently disabled
     // if (configPage2.displayType && (mainLoopCount & 255) == 1) { updateDisplay();}
+    uint32_t STALL_TIME = getStallTime();
 
     noInterrupts(); // Make sure we can reset everything before any other interrupts fire. It's also required for the isDecoderStalled function.
-    if ( isDecoderStalled() == false ) //Check how long ago the last tooth was seen compared to now.
+    if ( isDecoderStalled(STALL_TIME) == false ) //Check how long ago the last tooth was seen compared to now.
     { //Engine is not stalled so continue as normal
       interrupts();
       currentStatus.longRPM = getRPM(); //Long RPM is included here

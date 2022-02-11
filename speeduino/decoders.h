@@ -43,7 +43,8 @@ void loggerPrimaryISR();
 void loggerSecondaryISR();
 
 inline void resetDecoderState();
-inline bool isDecoderStalled();
+inline bool isDecoderStalled(uint32_t);
+inline uint32_t getStallTime();
 
 //All of the below are the 6 required functions for each decoder / pattern
 void triggerSetup_missingTooth();
