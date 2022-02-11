@@ -5,6 +5,7 @@
 
 #include "missing_tooth/missing_tooth.h"
 #include "dual_wheel/dual_wheel.h"
+#include "missing_tooth/missing_tooth_decoding.h"
 
 void setup()
 {
@@ -16,8 +17,9 @@ void setup()
 
     UNITY_BEGIN();    // IMPORTANT LINE!
 
-    testMissingTooth();
-    testDualWheel();
+    //testMissingTooth();
+    //testDualWheel();
+    testMissingToothDecoding();
 
     UNITY_END(); // stop unit testing
 }
