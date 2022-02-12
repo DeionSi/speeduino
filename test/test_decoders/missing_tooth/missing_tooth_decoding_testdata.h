@@ -25,10 +25,19 @@ void decodingTest0setup() {
   configPage4.TrigEdgeSec = 0;
   configPage10.TrigEdgeThrd = 0;
 }
+// TODO: figure out a reasonable delay
+const uint16_t test0delayLength = 1000;
+const uint16_t test0delays[] = {
+  test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength*2
+};
 
 struct decodingTest {
   const char *name;
   void (*decodingSetup)();
+  const byte primaryTriggerPatternCount;
+  const byte primaryTriggerPatternStartPos;
+  const byte primaryTriggerPatternExecuteCount;
+  const uint16_t *primaryTriggerPattern;
 
   //TODO: What are the expected decoder outputs?
   // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
@@ -37,6 +46,7 @@ struct decodingTest {
   const bool expectedHalfSync;
   const byte expectedSyncLossCount;
   const byte expectedRevolutionCount;
+  uint16_t expectedRPM;
 };
 
 const byte testCount = 1;
@@ -44,9 +54,14 @@ decodingTest decodingTests[testCount] = {
   { // Missing tooth 12-1
   .name = "Missing tooth 12-1, wasted spark",
   .decodingSetup = decodingTest0setup,
+  .primaryTriggerPatternCount = sizeof(test0delays)/sizeof(test0delays[0]),
+  .primaryTriggerPatternStartPos = 5,
+  .primaryTriggerPatternExecuteCount = 30,
+  .primaryTriggerPattern = test0delays,
   .expectedSync = true,
   .expectedHalfSync = false,
   .expectedSyncLossCount = 0,
-  .expectedRevolutionCount = 0,
+  .expectedRevolutionCount = 1,
+  .expectedRPM = 0, // This is calculated later TODO: Calculate this at initialization
   }
 };
