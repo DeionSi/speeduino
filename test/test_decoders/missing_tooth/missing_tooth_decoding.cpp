@@ -3,9 +3,14 @@
 #include "init.h"
 #include "globals.h"
 #include "decoders.h"
+#include "missing_tooth_decoding_testdata.h"
 
-void testMissingToothDecoding_reset() {
+decodingTest *currentDecodingTest;
+uint16_t expectedRPM;
+
+void testDecoding_reset() {
   //This is from Speeduinos main loop which check for engine stall/turn off and resets a bunch decoder related values
+  //TODO: Use a function in speeduino to do this
   currentStatus.RPM = 0;
   toothLastToothTime = 0;
   toothLastSecToothTime = 0;
@@ -18,31 +23,7 @@ void testMissingToothDecoding_reset() {
 
 void testMissingToothDecoding_execute() {
   //TODO: Call the function that is called when engine stalls and the decoder is reset
-
-  //// Decoder configuration - START
-  configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
-  configPage4.triggerTeeth = 12; //TODO: Use different values
-  configPage4.triggerMissingTeeth = 1; //TODO: Use different values
-  configPage4.TrigSpeed = CRANK_SPEED; //TODO: Use different values
-  configPage4.trigPatternSec = SEC_TRIGGER_POLL; //TODO: Use different values
-  configPage4.PollLevelPolarity = HIGH;
-  configPage2.perToothIgn = false; //TODO: Test with this enabled, but the primary function of this tester is not to test new ignition mode
-  configPage4.StgCycles = 1; //TODO: What value to use and test with?
-  configPage10.vvt2Enabled = 0; //TODO: Enable VVT testing
-  currentStatus.crankRPM = 200; //TODO: What value to use and test with?
-  configPage4.triggerFilter = 0; //TODO: Test filters
-
-  //TODD: These are relevant to each other, how to set/test them?
-  configPage4.sparkMode = IGN_MODE_SEQUENTIAL;
-  configPage2.injLayout == INJ_SEQUENTIAL;
-  CRANK_ANGLE_MAX = CRANK_ANGLE_MAX_IGN = 720;
-
-  // These are not important but set them for clarity's sake
-  configPage4.TrigEdge = 0;
-  configPage4.TrigEdgeSec = 0;
-  configPage10.TrigEdgeThrd = 0;
-  
-  //// Decoder configuration - END
+  currentDecodingTest->decodingSetup();
 
   // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
   setPinMapping(3);
@@ -56,7 +37,7 @@ void testMissingToothDecoding_execute() {
   interrupts();
 
   // TODO: figure out a reasonable delay
-  const uint32_t delayLength = 150000;
+  const uint32_t delayLength = 1000;
 
   // TODO: Everything below is to do:
 
@@ -65,27 +46,30 @@ void testMissingToothDecoding_execute() {
   uint32_t delays[gaps] = {
     delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength*2
   };
-  const byte secondaryInterval = (gaps)*2;
-
   uint16_t finalDelay = 0;
   uint32_t nextTrigger = micros();
   
   const byte unityMessageLength = 100;
   char unityMessage[unityMessageLength];
 
+  const byte triggersCount = 20;
 
-  for (int secondaryPosition = -3, patternPosition = 1; secondaryPosition < 70; secondaryPosition++, patternPosition++) {
+
+  uint32_t rotationTime = 0;
+  for (int i = 0; i < gaps; i++) {
+    rotationTime += delays[gaps];
+  }
+  expectedRPM = 1 / (rotationTime / 1000 / 1000 / 60);
+  snprintf(unityMessage, unityMessageLength, "expectedRPM %u", expectedRPM);
+  UnityPrint(unityMessage);
+  UNITY_PRINT_EOL();
+
+  for (int secondaryPosition = -3, patternPosition = 1; secondaryPosition < triggersCount; secondaryPosition++, patternPosition++) {
     
-    while (micros() < nextTrigger-12000) {
-      delay(10);
-    }
-    finalDelay = nextTrigger - micros();
-    delayMicroseconds(finalDelay);
-
     triggerHandler();
 
     snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
-    UnityMessage(unityMessage, __LINE__);
+    UNITY_PRINT_EOL();
 
     /*if (secondaryPosition % secondaryInterval == 0) {
       triggerSec_UniversalDecoder();
@@ -95,17 +79,55 @@ void testMissingToothDecoding_execute() {
       patternPosition = 0;
     }
     nextTrigger += delays[patternPosition];
+
+    snprintf(unityMessage, unityMessageLength, "delay %lu", nextTrigger - micros());
+    UnityPrint(unityMessage);
+    UNITY_PRINT_EOL();
+
+    while (micros() < nextTrigger-12000) {
+      delay(10);
+    }
+
+    finalDelay = nextTrigger - micros();
+    delayMicroseconds(finalDelay);
   }
-
-  //TODO: What are the expected decoder outputs?
-
-  TEST_ASSERT_TRUE(currentStatus.hasSync);
-  TEST_ASSERT_EQUAL(0, currentStatus.syncLossCounter);
-  //TEST_ASSERT_EQUAL(3, currentStatus.startRevolutions); // How to count?
 
 }
 
+void testSync() {
+  TEST_ASSERT_EQUAL(currentDecodingTest->expectedSync, currentStatus.hasSync);
+}
+void testHalfSync() {
+  TEST_ASSERT_EQUAL(currentDecodingTest->expectedHalfSync, BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC));
+}
+void testSyncLossCount() {
+  TEST_ASSERT_EQUAL(currentDecodingTest->expectedSyncLossCount, currentStatus.syncLossCounter);
+}
+void testRPM() {
+  TEST_ASSERT_EQUAL(expectedRPM, getRPM());
+}
+void testRevolutionCounter() {
+  TEST_ASSERT_EQUAL(currentDecodingTest->expectedRevolutionCount, currentStatus.startRevolutions); // How to count?
+}
+
+void outputTests() {
+
+  //TODO: What are the expected decoder outputs?
+  RUN_TEST(testSync);
+  RUN_TEST(testHalfSync);
+  RUN_TEST(testSyncLossCount);
+  //TODO: move calculation of expected RPM to here
+  RUN_TEST(testRPM);
+  RUN_TEST(testRevolutionCounter);
+}
+
 void testMissingToothDecoding() {
-  
-  RUN_TEST(testMissingToothDecoding_execute);
+  // Perform the test
+  for (auto testData : decodingTests) {
+    currentDecodingTest = &testData;
+    UnityMessage(currentDecodingTest->name, __LINE__);
+    testMissingToothDecoding_execute();
+    outputTests();
+    testDecoding_reset();
+  }
 }
