@@ -22,13 +22,13 @@ void testDecoding_reset() {
 }
 
 void testMissingToothDecoding_execute() {
-  //TODO: Call the function that is called when engine stalls and the decoder is reset
   currentDecodingTest->decodingSetup();
 
   // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
   setPinMapping(3);
 
   // initaliseTriggers attaches interrupts to trigger functions, so disabled interrupts, detach them and enable interrupts again
+  // Interrupts are needed for micros() function
   noInterrupts();
   initialiseTriggers();
   detachInterrupt( digitalPinToInterrupt(pinTrigger) );
@@ -36,61 +36,59 @@ void testMissingToothDecoding_execute() {
   detachInterrupt( digitalPinToInterrupt(pinTrigger3) );
   interrupts();
 
-  // TODO: figure out a reasonable delay
-  const uint32_t delayLength = 1000;
-
   // TODO: Everything below is to do:
 
-  // 12-1
-  const byte gaps = 11;
-  uint32_t delays[gaps] = {
-    delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength, delayLength*2
-  };
-  uint16_t finalDelay = 0;
-  uint32_t nextTrigger = micros();
-  
-  const byte unityMessageLength = 100;
+  const byte unityMessageLength = 200;
   char unityMessage[unityMessageLength];
 
-  const byte triggersCount = 20;
-
-
+  // Get expected RPM
   uint32_t rotationTime = 0;
-  for (int i = 0; i < gaps; i++) {
-    rotationTime += delays[gaps];
-  }
-  expectedRPM = 1 / (rotationTime / 1000 / 1000 / 60);
-  snprintf(unityMessage, unityMessageLength, "expectedRPM %u", expectedRPM);
+  for (int i = 0; i < currentDecodingTest->primaryTriggerPatternCount; i++) { rotationTime += currentDecodingTest->primaryTriggerPattern[i]; }
+  expectedRPM = 60000000L / rotationTime; // microseconds per minute divided by microseconds per revolution
+  snprintf(unityMessage, unityMessageLength, "expectedRPM %u rotationTime %lu", expectedRPM, rotationTime);
   UnityPrint(unityMessage);
   UNITY_PRINT_EOL();
 
-  for (int secondaryPosition = -3, patternPosition = 1; secondaryPosition < triggersCount; secondaryPosition++, patternPosition++) {
-    
+  uint32_t triggerLog[30];
+  uint32_t nextTrigger = micros();
+  
+  for (int i = 0, patternPosition = currentDecodingTest->primaryTriggerPatternStartPos; i < currentDecodingTest->primaryTriggerPatternExecuteCount;) {
+
+    triggerLog[i] = micros();
+
     triggerHandler();
 
-    snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
-    UNITY_PRINT_EOL();
+    //snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
+    //UNITY_PRINT_EOL();
 
-    /*if (secondaryPosition % secondaryInterval == 0) {
-      triggerSec_UniversalDecoder();
-    }*/
+    
+    if (patternPosition >= currentDecodingTest->primaryTriggerPatternCount) { patternPosition = 0; }
+    nextTrigger += currentDecodingTest->primaryTriggerPattern[patternPosition];
 
-    if (patternPosition >= gaps) {
-      patternPosition = 0;
-    }
-    nextTrigger += delays[patternPosition];
+    i++;
+    patternPosition++;
 
-    snprintf(unityMessage, unityMessageLength, "delay %lu", nextTrigger - micros());
-    UnityPrint(unityMessage);
-    UNITY_PRINT_EOL();
-
+    // Delay until next
     while (micros() < nextTrigger-12000) {
       delay(10);
     }
+    delayMicroseconds(nextTrigger - micros());
 
-    finalDelay = nextTrigger - micros();
-    delayMicroseconds(finalDelay);
   }
+
+  // Show a little log of times
+  uint32_t lastTriggerTime = 0;
+  for (uint32_t time : triggerLog) {
+    uint32_t displayTime = 0;
+    if (lastTriggerTime > 0) { displayTime = time - lastTriggerTime; }
+    else { displayTime = time; }
+    lastTriggerTime = time;
+
+    snprintf(unityMessage, unityMessageLength, "interval %lu", displayTime);
+    UnityPrint(unityMessage);
+    UNITY_PRINT_EOL();
+  }
+
 
 }
 
@@ -125,6 +123,11 @@ void testMissingToothDecoding() {
   // Perform the test
   for (auto testData : decodingTests) {
     currentDecodingTest = &testData;
+
+    uint32_t rotationTime = 0;
+    for (int i = 0; i < currentDecodingTest->primaryTriggerPatternCount; i++) { rotationTime += currentDecodingTest->primaryTriggerPattern[i]; }
+    currentDecodingTest->expectedRPM = 60000000L / rotationTime;
+
     UnityMessage(currentDecodingTest->name, __LINE__);
     testMissingToothDecoding_execute();
     outputTests();
