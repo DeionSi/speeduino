@@ -3,35 +3,27 @@
 
 enum timedTestType {
   ttt_CRANKANGLE,
+  ttt_SYNC,
+  ttt_HALFSYNC,
+  ttt_SYNCLOSSCOUNT,
+  ttt_RPM,
+  ttt_REVCOUNT
 };
 
-const char timedTestTypeFriendlyName[] = {
-  "CrankAngle",
+const char *timedTestTypeFriendlyName[] = { 
+  "Crankangle",
+  "Sync",
+  "Half-sync",
+  "Sync-loss count",
+  "RPM",
+  "Revolution count",
 };
 
+struct decodingTest;
+decodingTest *currentDecodingTest;
 struct timedTest;
 timedTest *currentTimedTest;
 
-struct timedTest {
-
-  static void run_test() {
-    TEST_ASSERT_INT_WITHIN(currentTimedTest->expected, currentTimedTest->delta, currentTimedTest->result);
-  }
-
-  void prepareResult() {
-    switch(type) {
-      case ttt_CRANKANGLE:
-        result = getCrankAngle();
-      break;
-    }
-  }
-
-  const timedTestType type;
-  const uint16_t expected;
-  const uint8_t delta;
-  const uint32_t time;
-  uint16_t result;
-};
 
 struct decodingTest {
   const char *name;
@@ -47,13 +39,48 @@ struct decodingTest {
   //TODO: What are the expected decoder outputs?
   // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
   // toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
-  const bool expectedSync;
-  const bool expectedHalfSync;
-  const byte expectedSyncLossCount;
-  const byte expectedRevolutionCount;
-  uint16_t expectedRPM;
 
-} *currentDecodingTest;
+};
+
+struct timedTest {
+
+  void prepareResult() {
+    switch(type) {
+      case ttt_CRANKANGLE:
+        result = getCrankAngle();
+      break;
+      case ttt_SYNC:
+        result = currentStatus.hasSync;
+      break;
+      case ttt_HALFSYNC:
+        result = BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+      break;
+      case ttt_SYNCLOSSCOUNT:
+        result = currentStatus.syncLossCounter;
+      break;
+      case ttt_RPM:
+        //TODO: Calculate expected at initialization
+        {
+        uint32_t rotationTime = 0;
+        for (int i; i < currentDecodingTest->primaryTriggerPatternCount; i++) { rotationTime += currentDecodingTest->primaryTriggerPattern[i]; }
+        expected = 60000000L / rotationTime;
+        
+        result = getRPM();
+        }
+      break;
+      case ttt_REVCOUNT:
+        result = currentStatus.startRevolutions;
+      break;
+
+    }
+  }
+
+  const timedTestType type;
+  uint16_t expected;
+  const uint8_t delta;
+  const uint32_t time;
+  uint16_t result;
+};
 
 void decodingTest0setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
@@ -87,10 +114,14 @@ const uint16_t test0delays[] = {
 
 timedTest test0timedTests[] = {
   { .type = ttt_CRANKANGLE, .expected = 15, .delta = 0, .time = 12500, .result = 0 },
+  { .type = ttt_SYNC, .expected = 1, .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_HALFSYNC, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_SYNCLOSSCOUNT, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_RPM, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_REVCOUNT, .expected = 1, .delta = 0, .time = UINT_MAX, .result = 0 },
 };
 
-const byte testCount = 1;
-decodingTest decodingTests[testCount] = {
+decodingTest decodingTests[] = {
   { // Missing tooth 12-1
   .name = "Missing tooth 12-1, wasted spark",
   .decodingSetup = decodingTest0setup,
@@ -100,10 +131,15 @@ decodingTest decodingTests[testCount] = {
   .primaryTriggerPattern = test0delays,
   .timedTests = test0timedTests,
   .timedTestsCount = sizeof(test0timedTests)/sizeof(test0timedTests[0]),
-  .expectedSync = true,
-  .expectedHalfSync = false,
-  .expectedSyncLossCount = 0,
-  .expectedRevolutionCount = 1,
-  .expectedRPM = 0, // This is calculated later TODO: Calculate this at initialization
-  }
+  },
+  { // Missing tooth 12-1
+  .name = "Missing tooth 12-1, wasted spark",
+  .decodingSetup = decodingTest0setup,
+  .primaryTriggerPatternCount = sizeof(test0delays)/sizeof(test0delays[0]),
+  .primaryTriggerPatternStartPos = 0,
+  .primaryTriggerPatternExecuteCount = 5,
+  .primaryTriggerPattern = test0delays,
+  .timedTests = test0timedTests,
+  .timedTestsCount = sizeof(test0timedTests)/sizeof(test0timedTests[0]),
+  },
 };
