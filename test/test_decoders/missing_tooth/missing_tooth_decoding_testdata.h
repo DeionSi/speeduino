@@ -1,11 +1,65 @@
 #include "arduino.h"
 #include "decoders.h"
 
+enum timedTestType {
+  ttt_CRANKANGLE,
+};
+
+const char timedTestTypeFriendlyName[] = {
+  "CrankAngle",
+};
+
+struct timedTest;
+timedTest *currentTimedTest;
+
+struct timedTest {
+
+  static void run_test() {
+    TEST_ASSERT_INT_WITHIN(currentTimedTest->expected, currentTimedTest->delta, currentTimedTest->result);
+  }
+
+  void prepareResult() {
+    switch(type) {
+      case ttt_CRANKANGLE:
+        result = getCrankAngle();
+      break;
+    }
+  }
+
+  const timedTestType type;
+  const uint16_t expected;
+  const uint8_t delta;
+  const uint32_t time;
+  uint16_t result;
+};
+
+struct decodingTest {
+  const char *name;
+  void (*decodingSetup)();
+  const byte primaryTriggerPatternCount;
+  const byte primaryTriggerPatternStartPos;
+  const byte primaryTriggerPatternExecuteCount;
+  const uint16_t *primaryTriggerPattern;
+
+  timedTest *timedTests;
+  const byte timedTestsCount;
+
+  //TODO: What are the expected decoder outputs?
+  // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
+  // toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
+  const bool expectedSync;
+  const bool expectedHalfSync;
+  const byte expectedSyncLossCount;
+  const byte expectedRevolutionCount;
+  uint16_t expectedRPM;
+
+} *currentDecodingTest;
 
 void decodingTest0setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
   configPage4.triggerTeeth = 12; //TODO: Use different values
   configPage4.triggerMissingTeeth = 1; //TODO: Use different values
+  configPage4.triggerAngle = 0; //TODO: Use different values
   configPage4.TrigSpeed = CRANK_SPEED; //TODO: Use different values
   configPage4.trigPatternSec = SEC_TRIGGER_SINGLE; //TODO: Use different values
   configPage4.PollLevelPolarity = HIGH;
@@ -31,22 +85,8 @@ const uint16_t test0delays[] = {
   test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength*2
 };
 
-struct decodingTest {
-  const char *name;
-  void (*decodingSetup)();
-  const byte primaryTriggerPatternCount;
-  const byte primaryTriggerPatternStartPos;
-  const byte primaryTriggerPatternExecuteCount;
-  const uint16_t *primaryTriggerPattern;
-
-  //TODO: What are the expected decoder outputs?
-  // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
-  // toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
-  const bool expectedSync;
-  const bool expectedHalfSync;
-  const byte expectedSyncLossCount;
-  const byte expectedRevolutionCount;
-  uint16_t expectedRPM;
+timedTest test0timedTests[] = {
+  { .type = ttt_CRANKANGLE, .expected = 15, .delta = 0, .time = 12500, .result = 0 },
 };
 
 const byte testCount = 1;
@@ -55,9 +95,11 @@ decodingTest decodingTests[testCount] = {
   .name = "Missing tooth 12-1, wasted spark",
   .decodingSetup = decodingTest0setup,
   .primaryTriggerPatternCount = sizeof(test0delays)/sizeof(test0delays[0]),
-  .primaryTriggerPatternStartPos = 5,
+  .primaryTriggerPatternStartPos = 0,
   .primaryTriggerPatternExecuteCount = 30,
   .primaryTriggerPattern = test0delays,
+  .timedTests = test0timedTests,
+  .timedTestsCount = sizeof(test0timedTests)/sizeof(test0timedTests[0]),
   .expectedSync = true,
   .expectedHalfSync = false,
   .expectedSyncLossCount = 0,
