@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "decoders.h"
 #include "missing_tooth_decoding_testdata.h"
+#include "crankMaths.h"
 
 const byte unityMessageLength = 200;
 char unityMessage[unityMessageLength];
@@ -76,6 +77,10 @@ void testMissingToothDecoding_execute() {
     i++;
     patternPosition++;
 
+    // This is done in the normal Speeduino loop and is needed for (some?) getCrankAngle calculations
+    currentStatus.RPM = getRPM();
+    doCrankSpeedCalcs();
+
     // Do any timed tests before we wait for the next trigger
     while (timedTestPos < currentDecodingTest->timedTestsCount
             && currentDecodingTest->timedTests[timedTestPos].time < nextTrigger
@@ -92,8 +97,8 @@ void testMissingToothDecoding_execute() {
       timedTestPos++;
 
       //snprintf(unityMessage, unityMessageLength, "interval %lu", displayTime);
-      UnityPrint("trigger test");
-      UNITY_PRINT_EOL();
+      /*UnityPrint("trigger test");
+      UNITY_PRINT_EOL();*/
     }
 
   }
@@ -140,7 +145,7 @@ void testMissingToothDecoding() {
       //snprintf(unityMessage, unityMessageLength, "delta %u expected %u result %u", currentTimedTest->delta, currentTimedTest->expected, currentTimedTest->result);
       //UnityMessage(unityMessage, __LINE__);
 
-      snprintf(unityMessage, unityMessageLength, "%d %s", i, timedTestTypeFriendlyName[i]);
+      snprintf(unityMessage, unityMessageLength, "%d %s", i, timedTestTypeFriendlyName[currentTimedTest->type]);
       UnityDefaultTestRun(run_test, unityMessage, __LINE__);
     }
 
