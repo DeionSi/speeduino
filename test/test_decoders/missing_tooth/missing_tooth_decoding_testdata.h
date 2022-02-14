@@ -1,6 +1,10 @@
 #include "arduino.h"
 #include "decoders.h"
 
+//TODO: What are the expected decoder outputs?
+// sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
+// toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
+
 enum timedTestType {
   ttt_CRANKANGLE,
   ttt_SYNC,
@@ -36,9 +40,7 @@ struct decodingTest {
   timedTest *timedTests;
   const byte timedTestsCount;
 
-  //TODO: What are the expected decoder outputs?
-  // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
-  // toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
+
 
 };
 
@@ -91,7 +93,7 @@ void decodingTest0setup() {
   configPage4.trigPatternSec = SEC_TRIGGER_SINGLE; //TODO: Use different values
   configPage4.PollLevelPolarity = HIGH;
   configPage2.perToothIgn = false; //TODO: Test with this enabled, but the primary function of this tester is not to test new ignition mode
-  configPage4.StgCycles = 1; //TODO: What value to use and test with?
+  configPage4.StgCycles = 1; //TODO: What value to use and test with? //There are calculation issues with high rpm and initial rpm calculation
   configPage10.vvt2Enabled = 0; //TODO: Enable VVT testing
   currentStatus.crankRPM = 200; //TODO: What value to use and test with?
   configPage4.triggerFilter = 0; //TODO: Test filters
@@ -113,12 +115,17 @@ const uint16_t test0delays[] = {
 };
 
 timedTest test0timedTests[] = {
-  { .type = ttt_CRANKANGLE, .expected = 15, .delta = 0, .time = 12500, .result = 0 },
-  { .type = ttt_SYNC, .expected = 1, .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_HALFSYNC, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_SYNCLOSSCOUNT, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_RPM, .expected = 0, .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_REVCOUNT, .expected = 1, .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_SYNC,           .expected = 0,  .delta = 0, .time = 10500,    .result = 0 },
+  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = 10500,    .result = 0 },
+  { .type = ttt_SYNC,           .expected = 1,  .delta = 0, .time = 12500,    .result = 0 },
+  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = 12500,    .result = 0 },
+  { .type = ttt_REVCOUNT,       .expected = 0,  .delta = 0, .time = 12700,    .result = 0 },
+  { .type = ttt_CRANKANGLE,     .expected = 45, .delta = 0, .time = 25500,    .result = 0 },
+  { .type = ttt_SYNC,           .expected = 1,  .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_SYNCLOSSCOUNT,  .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_RPM,            .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
+  { .type = ttt_REVCOUNT,       .expected = 2,  .delta = 0, .time = UINT_MAX, .result = 0 },
 };
 
 decodingTest decodingTests[] = {
@@ -127,17 +134,7 @@ decodingTest decodingTests[] = {
   .decodingSetup = decodingTest0setup,
   .primaryTriggerPatternCount = sizeof(test0delays)/sizeof(test0delays[0]),
   .primaryTriggerPatternStartPos = 0,
-  .primaryTriggerPatternExecuteCount = 30,
-  .primaryTriggerPattern = test0delays,
-  .timedTests = test0timedTests,
-  .timedTestsCount = sizeof(test0timedTests)/sizeof(test0timedTests[0]),
-  },
-  { // Missing tooth 12-1
-  .name = "Missing tooth 12-1, wasted spark",
-  .decodingSetup = decodingTest0setup,
-  .primaryTriggerPatternCount = sizeof(test0delays)/sizeof(test0delays[0]),
-  .primaryTriggerPatternStartPos = 0,
-  .primaryTriggerPatternExecuteCount = 5,
+  .primaryTriggerPatternExecuteCount = 35,
   .primaryTriggerPattern = test0delays,
   .timedTests = test0timedTests,
   .timedTestsCount = sizeof(test0timedTests)/sizeof(test0timedTests[0]),
