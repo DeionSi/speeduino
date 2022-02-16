@@ -93,7 +93,7 @@ void testMissingToothDecoding_execute() {
       triggerLog[triggerLogPos] = micros();
       triggerLogPos++;
 
-      currentDecodingTest->timedTests[timedTestPos].prepareResult();
+      currentDecodingTest->timedTests[timedTestPos].execute();
       timedTestPos++;
 
       //snprintf(unityMessage, unityMessageLength, "interval %lu", displayTime);
@@ -105,7 +105,7 @@ void testMissingToothDecoding_execute() {
 
   // Run remaining tests that should happen at end
   while (timedTestPos < currentDecodingTest->timedTestsCount) {
-    currentDecodingTest->timedTests[timedTestPos].prepareResult();
+    currentDecodingTest->timedTests[timedTestPos].execute();
     timedTestPos++;
   }
 
@@ -122,9 +122,6 @@ void testMissingToothDecoding_execute() {
 
 }
 
-static void run_test() {
-  TEST_ASSERT_INT_WITHIN(currentTimedTest->delta, currentTimedTest->expected, currentTimedTest->result);
-}
 
 //TODO: What are the expected decoder outputs?
 
@@ -140,13 +137,11 @@ void testMissingToothDecoding() {
     testMissingToothDecoding_execute();
 
     for (int i = 0; i < currentDecodingTest->timedTestsCount; i++) {
-      currentTimedTest = &currentDecodingTest->timedTests[i];
+      currentDecodingTest->timedTests[i].run_test();
 
-      //snprintf(unityMessage, unityMessageLength, "delta %u expected %u result %u", currentTimedTest->delta, currentTimedTest->expected, currentTimedTest->result);
-      //UnityMessage(unityMessage, __LINE__);
+      snprintf(unityMessage, unityMessageLength, "delta %u expected %u result %u", currentDecodingTest->timedTests[i].test.delta, currentDecodingTest->timedTests[i].test.expected, currentDecodingTest->timedTests[i].test.result);
+      UnityMessage(unityMessage, __LINE__);
 
-      snprintf(unityMessage, unityMessageLength, "%d %s", i, timedTestTypeFriendlyName[currentTimedTest->type]);
-      UnityDefaultTestRun(run_test, unityMessage, __LINE__);
     }
 
     testDecoding_reset();
