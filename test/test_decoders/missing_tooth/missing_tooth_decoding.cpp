@@ -31,6 +31,7 @@ void delayUntil(uint32_t time) {
   }
 }
 
+//TODO Classify
 void testMissingToothDecoding_execute() {
   currentDecodingTest->decodingSetup();
 
@@ -48,75 +49,46 @@ void testMissingToothDecoding_execute() {
 
   // TODO: Everything below is to do:
 
-  uint32_t triggerLog[currentDecodingTest->primaryTriggerPatternExecuteCount + currentDecodingTest->timedTestsCount];
-  uint32_t nextTrigger = 0;
+  uint32_t triggerLog[currentDecodingTest->eventCount];
   uint32_t timingOffsetFrom0 = micros();
-  byte timedTestPos = 0;
-  byte triggerLogPos = 0;
   
-  for (int i = 0, patternPosition = currentDecodingTest->primaryTriggerPatternStartPos; i < currentDecodingTest->primaryTriggerPatternExecuteCount;) {
+  for (int i = 0; i < currentDecodingTest->eventCount; i++) {
+    
+    //Only perform calculations before a test. We don't need to recalculate before subsequent tests
+    if ( ( i == 0 || ( i > 0 && currentDecodingTest->events[i-1].type != tet_TEST ) ) && currentDecodingTest->events[i].type == tet_TEST) {
+      currentStatus.RPM = getRPM();
+      doCrankSpeedCalcs();
+    }
 
-    delayUntil(nextTrigger + timingOffsetFrom0);
+    if (currentDecodingTest->events[i].time < UINT_MAX) { // UINT_MAX Entries are parsed as soon as they are reached
+      delayUntil(currentDecodingTest->events[i].time + timingOffsetFrom0);
+    }
 
-    triggerLog[triggerLogPos] = micros();
-    triggerLogPos++;
+    triggerLog[i] = micros();
 
-    triggerHandler();
+    currentDecodingTest->events[i].execute();
 
     //UnityPrint("trigger ");
     //UnityPrintNumberUnsigned(triggerLog[triggerLogPos-1]);
     //UNITY_PRINT_EOL();
 
-    //snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
-    //UNITY_PRINT_EOL();
-    
-    if (patternPosition >= currentDecodingTest->primaryTriggerPatternCount) { patternPosition = 0; }
-    uint32_t previousTrigger = nextTrigger;
-    nextTrigger += currentDecodingTest->primaryTriggerPattern[patternPosition];
+    /*snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
+    UnityPrint(unityMessage);
+    UNITY_PRINT_EOL();*/
 
-    i++;
-    patternPosition++;
-
-    // This is done in the normal Speeduino loop and is needed for (some?) getCrankAngle calculations
-    currentStatus.RPM = getRPM();
-    doCrankSpeedCalcs();
-
-    // Do any timed tests before we wait for the next trigger
-    while (timedTestPos < currentDecodingTest->timedTestsCount
-            && currentDecodingTest->timedTests[timedTestPos].time < nextTrigger
-            && currentDecodingTest->timedTests[timedTestPos].time >= previousTrigger
-            ) {
-      
-      // Delay until test target time
-      delayUntil(currentDecodingTest->timedTests[timedTestPos].time + timingOffsetFrom0);
-
-      triggerLog[triggerLogPos] = micros();
-      triggerLogPos++;
-
-      currentDecodingTest->timedTests[timedTestPos].execute();
-      timedTestPos++;
-
-      //snprintf(unityMessage, unityMessageLength, "interval %lu", displayTime);
-      /*UnityPrint("trigger test");
-      UNITY_PRINT_EOL();*/
-    }
-
-  }
-
-  // Run remaining tests that should happen at end
-  while (timedTestPos < currentDecodingTest->timedTestsCount) {
-    currentDecodingTest->timedTests[timedTestPos].execute();
-    timedTestPos++;
   }
 
   // Show a little log of times
   uint32_t lastTriggerTime = 0;
-  for (int i = 0; i < triggerLogPos; i++) {
+  for (int i = 0; i < currentDecodingTest->eventCount; i++) {
     uint32_t displayTime = triggerLog[i] - lastTriggerTime;
     lastTriggerTime = triggerLog[i];
 
-    snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu", triggerLog[i], triggerLog[i] - timingOffsetFrom0, displayTime);
+    snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", triggerLog[i], triggerLog[i] - timingOffsetFrom0, displayTime);
     UnityPrint(unityMessage);
+    if (currentDecodingTest->events[i].test != nullptr) {
+      UnityPrint(timedTestTypeFriendlyName[currentDecodingTest->events[i].test->type]);
+    }
     UNITY_PRINT_EOL();
   }
 
@@ -130,17 +102,15 @@ void testMissingToothDecoding() {
   for (auto testData : decodingTests) {
     currentDecodingTest = &testData;
 
-    // Do this to not get poisoned by the previous test name on this INFO
+    // Don't get poisoned by the previous test name on this INFO
     Unity.CurrentTestName = NULL;
 
     UnityMessage(currentDecodingTest->name, __LINE__);
     testMissingToothDecoding_execute();
 
-    for (int i = 0; i < currentDecodingTest->timedTestsCount; i++) {
-      currentDecodingTest->timedTests[i].run_test();
+    for (int i = 0; i < currentDecodingTest->eventCount; i++) {
 
-      snprintf(unityMessage, unityMessageLength, "delta %u expected %u result %u", currentDecodingTest->timedTests[i].test.delta, currentDecodingTest->timedTests[i].test.expected, currentDecodingTest->timedTests[i].test.result);
-      UnityMessage(unityMessage, __LINE__);
+      currentDecodingTest->events[i].run_test();
 
     }
 
