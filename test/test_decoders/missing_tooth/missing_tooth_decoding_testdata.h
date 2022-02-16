@@ -23,30 +23,22 @@ const char *timedTestTypeFriendlyName[] = {
   "Revolution count",
 };
 
-struct decodingTest;
-decodingTest *currentDecodingTest;
-struct timedTest;
-timedTest *currentTimedTest;
-
-
-struct decodingTest {
-  const char *name;
-  void (*decodingSetup)();
-  const byte primaryTriggerPatternCount;
-  const byte primaryTriggerPatternStartPos;
-  const byte primaryTriggerPatternExecuteCount;
-  const uint16_t *primaryTriggerPattern;
-
-  timedTest *timedTests;
-  const byte timedTestsCount;
-
-
-
+enum timedEventType {
+  tet_PRIMARYTRIGGER,
+  tet_TEST,
 };
 
-struct timedTest {
+struct testParams;
+testParams *currentTest;
 
-  void prepareResult() {
+struct testParams {
+
+  const timedTestType type;
+  const uint16_t expected;
+  const uint8_t delta;
+  uint16_t result;
+
+  void execute() {
     switch(type) {
       case ttt_CRANKANGLE:
         result = getCrankAngle();
@@ -61,28 +53,59 @@ struct timedTest {
         result = currentStatus.syncLossCounter;
       break;
       case ttt_RPM:
-        //TODO: Calculate expected at initialization
-        {
-        uint32_t rotationTime = 0;
-        for (int i; i < currentDecodingTest->primaryTriggerPatternCount; i++) { rotationTime += currentDecodingTest->primaryTriggerPattern[i]; }
-        expected = 60000000L / rotationTime;
-        
         result = getRPM();
-        }
       break;
       case ttt_REVCOUNT:
         result = currentStatus.startRevolutions;
       break;
-
     }
   }
 
-  const timedTestType type;
-  uint16_t expected;
-  const uint8_t delta;
-  const uint32_t time;
-  uint16_t result;
+  static void run_test() {
+    TEST_ASSERT_INT_WITHIN(currentTest->delta, currentTest->expected, currentTest->result);
+  }
+
 };
+
+struct timedEvent {
+  void execute() {
+    if (type == tet_PRIMARYTRIGGER) {
+      triggerHandler();
+    }
+    else if (type == tet_TEST) {
+      test.execute();
+    }
+  };
+  void run_test() {
+    if (type == tet_TEST) {
+      currentTest = &test;
+      RUN_TEST(test.run_test);
+    }
+  }
+
+  const timedEventType type;
+  const uint32_t time;
+  testParams test;
+};
+
+struct decodingTest;
+decodingTest *currentDecodingTest;
+struct timedEvent;
+timedEvent *currentTimedTest;
+
+struct decodingTest {
+  const char *name;
+  void (*decodingSetup)();
+  const byte primaryTriggerPatternCount;
+  const byte primaryTriggerPatternStartPos;
+  const byte primaryTriggerPatternExecuteCount;
+  const uint16_t *primaryTriggerPattern;
+
+  timedEvent *timedTests;
+  const byte timedTestsCount;
+
+};
+
 
 void decodingTest0setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
@@ -114,18 +137,19 @@ const uint16_t test0delays[] = {
   test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength, test0delayLength*2
 };
 
-timedTest test0timedTests[] = {
-  { .type = ttt_SYNC,           .expected = 0,  .delta = 0, .time = 10500,    .result = 0 },
-  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = 10500,    .result = 0 },
-  { .type = ttt_SYNC,           .expected = 1,  .delta = 0, .time = 12500,    .result = 0 },
-  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = 12500,    .result = 0 },
-  { .type = ttt_REVCOUNT,       .expected = 0,  .delta = 0, .time = 12700,    .result = 0 },
-  { .type = ttt_CRANKANGLE,     .expected = 45, .delta = 0, .time = 25500,    .result = 0 },
-  { .type = ttt_SYNC,           .expected = 1,  .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_HALFSYNC,       .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_SYNCLOSSCOUNT,  .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_RPM,            .expected = 0,  .delta = 0, .time = UINT_MAX, .result = 0 },
-  { .type = ttt_REVCOUNT,       .expected = 2,  .delta = 0, .time = UINT_MAX, .result = 0 },
+timedEvent test0timedTests[] = {
+  { .type = tet_TEST, .time = 10500,    .test = { .type = ttt_SYNC,          .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = 10500,    .test = { .type = ttt_HALFSYNC,      .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = 12500,    .test = { .type = ttt_SYNC,          .expected = 1,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = 12500,    .test = { .type = ttt_HALFSYNC,      .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = 12700,    .test = { .type = ttt_REVCOUNT,      .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = 25500,    .test = { .type = ttt_CRANKANGLE,    .expected = 45, .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_SYNC,          .expected = 1,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_HALFSYNC,      .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_SYNCLOSSCOUNT, .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_RPM,           .expected = 0,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_REVCOUNT,      .expected = 2,  .delta = 0, .result = 0 } },
+  { .type = tet_TEST, .time = UINT_MAX, .test = { .type = ttt_SYNC,          .expected = 1,  .delta = 0, .result = 0 } },
 };
 
 decodingTest decodingTests[] = {
