@@ -1,10 +1,20 @@
 #include "arduino.h"
 #include "decoders.h"
 #include "missing_tooth_decoding.h"
+#include "crankMaths.h"
 
 //TODO: What are the expected decoder outputs?
 // sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
 // toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
+
+void delayUntil(uint32_t time) {
+  if (micros() < time) { // No delay if we have already passed
+    if (time >= 12000) { // Make sure we don't compare against negative time
+      while (micros() < time - 12000) { delay(10); } // Delay in MILLIseconds until we can delay in MICROseconds
+    }
+    delayMicroseconds(time - micros()); // Remaining delay in MICROseconds
+  }
+}
 
 enum timedTestType {
   ttt_CRANKANGLE,
@@ -98,8 +108,6 @@ struct timedEvent {
   testParams *test;
 };
 
-struct decodingTest;
-decodingTest *currentDecodingTest;
 struct timedEvent;
 timedEvent *currentTimedTest;
 
@@ -108,6 +116,93 @@ struct decodingTest {
   void (*decodingSetup)();
   timedEvent *events;
   const byte eventCount;
+
+  void execute() {
+    // Don't get the previous test name on this INFO message
+    Unity.CurrentTestName = NULL;
+
+    UnityMessage(name, __LINE__);
+
+    decodingSetup();
+
+    // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
+    setPinMapping(3);
+
+    // initaliseTriggers attaches interrupts to trigger functions, so disabled interrupts, detach them and enable interrupts again
+    // Interrupts are needed for micros() function
+    noInterrupts();
+    initialiseTriggers();
+    detachInterrupt( digitalPinToInterrupt(pinTrigger) );
+    detachInterrupt( digitalPinToInterrupt(pinTrigger2) );
+    detachInterrupt( digitalPinToInterrupt(pinTrigger3) );
+    interrupts();
+
+    // TODO: Everything below is to do:
+
+    uint32_t triggerLog[eventCount];
+    uint32_t timingOffsetFrom0 = micros();
+
+    for (int i = 0; i < eventCount; i++) {
+      
+      //Only perform calculations before a test. We don't need to recalculate before subsequent tests
+      if ( ( i == 0 || ( i > 0 && events[i-1].type != tet_TEST ) ) && events[i].type == tet_TEST) {
+        currentStatus.RPM = getRPM();
+        doCrankSpeedCalcs();
+      }
+
+      if (events[i].time < UINT_MAX) { // UINT_MAX Entries are parsed as soon as they are reached
+        delayUntil(events[i].time + timingOffsetFrom0);
+      }
+
+      triggerLog[i] = micros();
+
+      events[i].execute();
+
+      //UnityPrint("trigger ");
+      //UnityPrintNumberUnsigned(triggerLog[triggerLogPos-1]);
+      //UNITY_PRINT_EOL();
+
+      /*snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
+      UnityPrint(unityMessage);
+      UNITY_PRINT_EOL();*/
+
+    }
+
+    // Show a little log of times
+    uint32_t lastTriggerTime = 0;
+    for (int i = 0; i < eventCount; i++) {
+      uint32_t displayTime = triggerLog[i] - lastTriggerTime;
+      lastTriggerTime = triggerLog[i];
+
+      snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", triggerLog[i], triggerLog[i] - timingOffsetFrom0, displayTime);
+      UnityPrint(unityMessage);
+      if (events[i].test != nullptr) {
+        UnityPrint(timedTestTypeFriendlyName[events[i].test->type]);
+      }
+      UNITY_PRINT_EOL();
+    }
+
+  }
+
+  void run_tests() {
+    for (int i = 0; i < eventCount; i++) {
+      events[i].run_test();
+    }
+  }
+
+  static void reset_decoding() {
+    //This is from Speeduinos main loop which checks for engine stall/turn off and resets a bunch decoder related values
+    //TODO: Use a function in speeduino to do this
+    currentStatus.RPM = 0;
+    toothLastToothTime = 0;
+    toothLastSecToothTime = 0;
+    currentStatus.hasSync = false;
+    BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+    currentStatus.startRevolutions = 0;
+    toothSystemCount = 0;
+    secondaryToothCount = 0;
+  }
+
 };
 
 void test0_setup() {
