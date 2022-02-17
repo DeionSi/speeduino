@@ -32,6 +32,9 @@ void delayUntil(uint32_t time) {
 
 testParams *currentTest;
 
+testParams::testParams(const timedTestType a_type, const uint16_t a_expected) : type(a_type), expected(a_expected) {};
+testParams::testParams(const timedTestType a_type, const uint16_t a_expected, const uint8_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
+
 void testParams::execute() {
   switch(type) {
     case ttt_CRANKANGLE:
@@ -69,7 +72,7 @@ void testParams::run_test() {
 }
 
 void timedEvent::execute() {
-  if (type == tet_PRIMARYTRIGGER) {
+  if (type == tet_PRITRIG) {
     triggerHandler();
   }
   else if (type == tet_TEST) {
@@ -117,7 +120,7 @@ void decodingTest::execute() {
       doCrankSpeedCalcs();
     }
 
-    if (events[i].time < UINT_MAX) { // UINT_MAX Entries are parsed as soon as they are reached
+    if (events[i].time < UINT32_MAX) { // UINT32_MAX Entries are parsed as soon as they are reached
       delayUntil(events[i].time + timingOffsetFrom0);
     }
 
