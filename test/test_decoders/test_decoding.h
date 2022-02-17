@@ -14,16 +14,18 @@ struct testParams {
 
   const timedTestType type;
   const uint16_t expected;
-  const uint8_t delta;
-  uint16_t result;
+  const uint8_t delta = 0;
+  uint16_t result = 0;
 
   void execute();
   static void run_test();
+  testParams(const timedTestType, const uint16_t);
+  testParams(const timedTestType, const uint16_t, const uint8_t);
 
 };
 
 enum timedEventType {
-  tet_PRIMARYTRIGGER,
+  tet_PRITRIG,
   tet_TEST,
 };
 
