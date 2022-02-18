@@ -8,7 +8,8 @@
 const byte unityMessageLength = 200;
 char unityMessage[unityMessageLength];
 
-const char *timedTestTypeFriendlyName[] = { 
+const char *timedTestTypeFriendlyName[] = {
+  "ignore",
   "Crankangle",
   "Sync",
   "Half-sync",
@@ -16,10 +17,6 @@ const char *timedTestTypeFriendlyName[] = {
   "RPM",
   "Revolution count",
 };
-
-//TODO: What are the expected decoder outputs?
-// sync, halfsync, synclosscount, revolutioncount, rpm, crankangle, MAX_STALL_TIME, toothCurrentCount, toothLastToothTime, 
-// toothLastMinusOneToothTime, toothOneTime, toothOneMinusOneTime, triggerToothAngle, triggerToothAngleIsCorrect, secondDerivEnabled
 
 void delayUntil(uint32_t time) {
   if (micros() < time) { // No delay if we have already passed
@@ -32,8 +29,9 @@ void delayUntil(uint32_t time) {
 
 testParams *currentTest;
 
-testParams::testParams(const timedTestType a_type, const uint16_t a_expected) : type(a_type), expected(a_expected) {};
-testParams::testParams(const timedTestType a_type, const uint16_t a_expected, const uint8_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
+testParams::testParams(const timedTestType a_type) : type(a_type) {};
+testParams::testParams(const timedTestType a_type, const uint32_t a_expected) : type(a_type), expected(a_expected) {};
+testParams::testParams(const timedTestType a_type, const uint32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
 void testParams::execute() {
   switch(type) {
@@ -55,25 +53,84 @@ void testParams::execute() {
     case ttt_REVCOUNT:
       result = currentStatus.startRevolutions;
     break;
+    case ttt_IGNORE:
+    default:
+    break;
   }
 }
 
 void testParams::run_test() {
-  snprintf(unityMessage, unityMessageLength, "delta %u expected %u result %u ", currentTest->delta, currentTest->expected, currentTest->result);
+  if(currentTest->type == ttt_IGNORE) {
+    return;
+  }
+
+  snprintf(unityMessage, unityMessageLength, "delta %u expected %lu result %lu ", currentTest->delta, currentTest->expected, currentTest->result);
   UnityPrint(unityMessage);
-  for (int i = strlen(unityMessage); i < 40; i++) { UnityPrint(" "); }
+  for (int i = strlen(unityMessage); i < 40; i++) { UnityPrint(" "); } //Padding
+
+  //snprintf(unityMessage, unityMessageLength, "Test: %s", timedTestTypeFriendlyName[currentTest->type]);
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL(currentTest->expected, currentTest->result);
+    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, currentTest->result, timedTestTypeFriendlyName[currentTest->type]);
   }
   else {
-    TEST_ASSERT_INT_WITHIN(currentTest->delta, currentTest->expected, currentTest->result);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, currentTest->result, timedTestTypeFriendlyName[currentTest->type]);
   }
+}
+
+testState *currentStateTest;
+
+void testState::execute() {
+  sync.execute();
+  halfSync.execute();
+  syncLossCount.execute();
+  revCount.execute();
+  toothAngleCorrect.execute();
+  toothAngle.execute();
+  lastToothTime.execute();
+  lastToothTimeMinusOne.execute();
+  rpm.execute();
+  stallTime.execute();
+  crankAngle.execute();
+}
+
+void testStateRun () {
+  if (currentTest->type != ttt_IGNORE) {
+    UnityDefaultTestRun(testParams::run_test, timedTestTypeFriendlyName[currentTest->type], __LINE__);
+  }
+} 
+
+void testState::run_test() {
+  currentTest = &currentStateTest->sync;
+  testStateRun();
+  currentTest = &currentStateTest->halfSync;
+  testStateRun();
+  currentTest = &currentStateTest->syncLossCount;
+  testStateRun();
+  currentTest = &currentStateTest->revCount;
+  testStateRun();
+  currentTest = &currentStateTest->toothAngleCorrect;
+  testStateRun();
+  currentTest = &currentStateTest->toothAngle;
+  testStateRun();
+  currentTest = &currentStateTest->lastToothTime;
+  testStateRun();
+  currentTest = &currentStateTest->lastToothTimeMinusOne;
+  testStateRun();
+  currentTest = &currentStateTest->rpm;
+  testStateRun();
+  currentTest = &currentStateTest->stallTime;
+  testStateRun();
+  currentTest = &currentStateTest->crankAngle;
+  testStateRun();
 }
 
 void timedEvent::execute() {
   if (type == tet_PRITRIG) {
     triggerHandler();
+    if (state != nullptr) {
+      state->execute();
+    }
   }
   else if (type == tet_TEST) {
     test->execute();
@@ -83,7 +140,12 @@ void timedEvent::execute() {
 void timedEvent::run_test() {
   if (type == tet_TEST) {
     currentTest = test;
-    UnityDefaultTestRun(test->run_test, timedTestTypeFriendlyName[currentTest->type], __LINE__);
+    UnityDefaultTestRun(test->run_test, timedTestTypeFriendlyName[test->type], __LINE__);
+  }
+  else if (state != nullptr) {
+    currentStateTest = state;
+    state->run_test();
+    //UnityDefaultTestRun(state->run_test, "StateTest", __LINE__);
   }
 }
 
@@ -152,7 +214,7 @@ void decodingTest::execute() {
     UNITY_PRINT_EOL();
   }
 
-  }
+}
 
 void decodingTest::run_tests() {
   for (int i = 0; i < eventCount; i++) {
