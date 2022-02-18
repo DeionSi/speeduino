@@ -29,48 +29,36 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-//Todo: crankangle
-testState test0_state0 {
-  .sync = testParams (ttt_SYNC, 0),
-  .halfSync = testParams (ttt_HALFSYNC, 0),
-  .syncLossCount = testParams (ttt_SYNCLOSSCOUNT, 0),
-  .revCount = testParams (ttt_REVCOUNT, 0),
-  .toothAngleCorrect = testParams (ttt_IGNORE),
-  .toothAngle = testParams (ttt_IGNORE),
-  .lastToothTime = testParams (ttt_IGNORE),
-  .lastToothTimeMinusOne = testParams (ttt_IGNORE),
-  .rpm = testParams (ttt_RPM, 0),
-  .stallTime = testParams (ttt_IGNORE),
-  .crankAngle = testParams (ttt_IGNORE),
+testParams test0_state0[] = {
+  { ttt_SYNC, 0 },
+  { ttt_HALFSYNC, 0 },
 };
-
-testState test0_state1 = test0_state0;
+testParams test0_state1[] = {
+  { ttt_SYNC, 1 },
+  { ttt_HALFSYNC, 0 },
+};
 
 //TODO: Automatic sorting of this list or relative time
 //TODO: Show test number on output
 //TODO: Cranking tests
 timedEvent test0_events[] {
-  { .type = tet_PRITRIG, .time = 1000,     .test = nullptr, .state = new testState(test0_state0) }, // 1
-  { .type = tet_PRITRIG, .time = 2000,     .test = nullptr, .state = new testState(test0_state0) }, // 2
-  { .type = tet_PRITRIG, .time = 3000,     .test = nullptr, .state = new testState(test0_state0) }, // 3
-  { .type = tet_PRITRIG, .time = 4000,     .test = nullptr, .state = new testState(test0_state0) }, // 4
-  { .type = tet_PRITRIG, .time = 5000,     .test = nullptr, .state = new testState(test0_state0) }, // 5
-  { .type = tet_PRITRIG, .time = 6000,     .test = nullptr, .state = new testState(test0_state0) }, // 6
-  { .type = tet_PRITRIG, .time = 7000,     .test = nullptr, .state = new testState(test0_state0) }, // 7
-  { .type = tet_PRITRIG, .time = 8000,     .test = nullptr, .state = new testState(test0_state0) }, // 8
-  { .type = tet_PRITRIG, .time = 9000,     .test = nullptr, .state = new testState(test0_state0) }, // 9
-  { .type = tet_PRITRIG, .time = 10000,    .test = nullptr, .state = new testState(test0_state0) }, // 10
-  { .type = tet_PRITRIG, .time = 11000,    .test = nullptr, .state = new testState(test0_state0) }, // 11
-  { .type = tet_TEST,    .time = 11500,    .test = new testParams (ttt_SYNC,     0), .state = nullptr },
-  { .type = tet_TEST,    .time = 11500,    .test = new testParams (ttt_HALFSYNC, 0), .state = nullptr },
-  { .type = tet_PRITRIG, .time = 13000,    .test = nullptr, .state = new testState(test0_state0) }, // 12+1 Missing tooth
-  { .type = tet_TEST,    .time = 13500,    .test = new testParams (ttt_SYNC,     1), .state = nullptr },
-  { .type = tet_TEST,    .time = 13500,    .test = new testParams (ttt_HALFSYNC, 0), .state = nullptr },
-  { .type = tet_TEST,    .time = 13700,    .test = new testParams (ttt_REVCOUNT, 0), .state = nullptr },
-  { .type = tet_PRITRIG, .time = 14000,    .test = nullptr, .state = new testState(test0_state0) }, // 2
-  { .type = tet_PRITRIG, .time = 15000,    .test = nullptr, .state = new testState(test0_state0) }, // 3
-/*  { .type = tet_PRITRIG, .time = 16000,    .test = nullptr }, // 4
-  { .type = tet_PRITRIG, .time = 17000,    .test = nullptr }, // 5
+  { .type = tet_PRITRIG, .time = 1000,     timedEventArrayTestEntry(test0_state0) }, // 1
+  { .type = tet_PRITRIG, .time = 2000,     timedEventArrayTestEntry(test0_state0) }, // 2
+  { .type = tet_PRITRIG, .time = 3000,     timedEventArrayTestEntry(test0_state0) }, // 3
+  { .type = tet_PRITRIG, .time = 4000,     timedEventArrayTestEntry(test0_state0) }, // 4
+  { .type = tet_PRITRIG, .time = 5000,     timedEventArrayTestEntry(test0_state0) }, // 5
+  { .type = tet_PRITRIG, .time = 6000,     timedEventArrayTestEntry(test0_state0) }, // 6
+  { .type = tet_PRITRIG, .time = 7000,     timedEventArrayTestEntry(test0_state0) }, // 7
+  { .type = tet_PRITRIG, .time = 8000,     timedEventArrayTestEntry(test0_state0) }, // 8
+  { .type = tet_PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
+  { .type = tet_PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
+  { .type = tet_PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
+  { .type = tet_PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state1) }, // 1 (incl missing tooth 12)
+//  { .type = tet_TEST,    .time = 13700,    .test = new testParams (ttt_REVCOUNT, 0), .state = nullptr },
+  { .type = tet_PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
+  { .type = tet_PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
+  { .type = tet_PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
+/*  { .type = tet_PRITRIG, .time = 17000,    .test = nullptr }, // 5
   { .type = tet_PRITRIG, .time = 18000,    .test = nullptr }, // 6
   { .type = tet_PRITRIG, .time = 19000,    .test = nullptr }, // 7
   { .type = tet_PRITRIG, .time = 20000,    .test = nullptr }, // 8
@@ -103,7 +91,7 @@ decodingTest decodingTests[] = {
   .name = "Missing tooth test 0, 12-1 wasted spark",
   .decodingSetup = test0_setup,
   .events = test0_events,
-  .eventCount = sizeof(test0_events)/sizeof(test0_events[0]),
+  .eventCount = countof(test0_events),
   },
 };
 
