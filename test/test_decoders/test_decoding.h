@@ -2,6 +2,7 @@
 #define TEST_DECODING_H
 
 enum timedTestType {
+  ttt_IGNORE,
   ttt_CRANKANGLE,
   ttt_SYNC,
   ttt_HALFSYNC,
@@ -13,15 +14,38 @@ enum timedTestType {
 struct testParams {
 
   const timedTestType type;
-  const uint16_t expected;
-  const uint8_t delta = 0;
-  uint16_t result = 0;
+  const uint32_t expected = 0;
+  const uint16_t delta = 0;
+  uint32_t result = 0;
 
   void execute();
   static void run_test();
-  testParams(const timedTestType, const uint16_t);
-  testParams(const timedTestType, const uint16_t, const uint8_t);
+  testParams(const timedTestType);
+  testParams(const timedTestType, const uint32_t);
+  testParams(const timedTestType, const uint32_t, const uint16_t);
 
+};
+
+//TODO: What are the expected decoder outputs?
+// easy: sync, halfsync, synclosscount, revolutioncount, triggerToothAngle, triggerToothAngleIsCorrect
+// medium: toothLastToothTime, toothLastMinusOneToothTime, rpm
+// hard: crankangle, MAX_STALL_TIME
+
+struct testState {
+  testParams sync;
+  testParams halfSync;
+  testParams syncLossCount;
+  testParams revCount;
+  testParams toothAngleCorrect;
+  testParams toothAngle;
+  testParams lastToothTime;
+  testParams lastToothTimeMinusOne;
+  testParams rpm;
+  testParams stallTime;
+  testParams crankAngle;
+
+  void execute();
+  static void run_test();
 };
 
 enum timedEventType {
@@ -36,6 +60,7 @@ struct timedEvent {
   const timedEventType type;
   const uint32_t time;
   testParams *test;
+  testState *state;
 };
 
 struct decodingTest {
