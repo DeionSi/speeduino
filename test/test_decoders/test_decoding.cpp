@@ -5,9 +5,12 @@
 #include "init.h"
 #include "test_decoding.h"
 
+#define INDIVIDUAL_TEST_REPORTS // Shows each test output rather than one per event
+#define INDIVIDUAL_TEST_REPORTS_DEBUG // Shows delta/expected/result for each individual test
+
 // Global variables
 
-const byte unityMessageLength = 200;
+const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
 uint32_t *currentResult;
@@ -28,8 +31,6 @@ void delayUntil(uint32_t time) {
 
 // testParams
 
-testParams::testParams() {};
-testParams::testParams(const timedTestType a_type) : type(a_type) {};
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected) : type(a_type), expected(a_expected) {};
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
@@ -46,7 +47,6 @@ const char* const testParams::friendlyNames[] = {
   [STALLTIME] = "Stall time",
   [CRANKANGLE] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
-  [IGNORE] = "ignore",   // special identifier causing a test to be ignored*/
 };
 
 uint32_t testParams::execute() const {
@@ -86,7 +86,6 @@ uint32_t testParams::execute() const {
     case STALLTIME:
       result = MAX_STALL_TIME;
       break;
-    case IGNORE:
     default:
       break;
   }
@@ -95,21 +94,20 @@ uint32_t testParams::execute() const {
 }
 
 void testParams::run_test() {
-  if(currentTest->type == IGNORE) {
-    return;
-  }
 
-  snprintf(unityMessage, unityMessageLength, "delta %u expected %lu result %lu ", currentTest->delta, currentTest->expected, *currentResult);
-  UnityPrint(unityMessage);
-  for (int i = strlen(unityMessage); i < 40; i++) { UnityPrint(" "); } //Padding
-
-  snprintf(unityMessage, unityMessageLength, "'%s'-test triggered at %lu", currentTest->name(), currentEvent->triggeredAt - currentDecodingTest->startTime);
+  #ifdef INDIVIDUAL_TEST_REPORTS_DEBUG
+  const char testMessageLength = 40;
+  char testMessage[testMessageLength];
+  snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", *currentResult, currentTest->expected, currentTest->delta);
+  UnityPrint(testMessage);
+  for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
+  #endif
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, unityMessage);
+    TEST_ASSERT_EQUAL(currentTest->expected, *currentResult);
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, unityMessage);
+    TEST_ASSERT_INT_WITHIN(currentTest->delta, currentTest->expected, *currentResult);
   }
 }
 
@@ -135,16 +133,18 @@ void timedEvent::execute() {
   }
 };
 
-void timedEvent::run_test() {
-  if (tests != nullptr) {
-    for (int i = 0; i < testCount; i++) {
-      if (tests[i].type == testParams::IGNORE) {
-        continue;
-      }
-      currentTest = &tests[i];
-      currentResult = &results[i];
-      currentEvent = this;
-      UnityDefaultTestRun(tests[i].run_test, tests[i].name(), __LINE__);
+void timedEvent::run_tests() {
+  if (currentEvent->tests != nullptr) {
+    for (int i = 0; i < currentEvent->testCount; i++) {
+      currentTest = &currentEvent->tests[i];
+      currentResult = &currentEvent->results[i];
+
+      #ifdef INDIVIDUAL_TEST_REPORTS
+      snprintf(unityMessage, unityMessageLength, "'%s' triggered at %lu", currentEvent->tests[i].name(), currentEvent->triggeredAt - currentDecodingTest->startTime);
+      UnityDefaultTestRun(currentEvent->tests[i].run_test, unityMessage, __LINE__);
+      #else
+      currentEvent->tests[i].run_test();
+      #endif
     }
   }
 }
@@ -190,16 +190,11 @@ void decodingTest::execute() {
 
     events[i].execute();
 
-    //UnityPrint("trigger ");
-    //UnityPrintNumberUnsigned(triggerLog[triggerLogPos-1]);
-    //UNITY_PRINT_EOL();
-
-    /*snprintf(unityMessage, unityMessageLength, "getCrankAngle %d / hasSync %d", getCrankAngle(), currentStatus.hasSync);
-    UnityPrint(unityMessage);
-    UNITY_PRINT_EOL();*/
-
   }
 
+}
+
+void decodingTest::show_triggerlog() {
   // Show a little log of times
   uint32_t lastTriggerTime = 0;
   for (int i = 0; i < eventCount; i++) {
@@ -208,16 +203,23 @@ void decodingTest::execute() {
 
     snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", events[i].triggeredAt, events[i].triggeredAt - startTime, displayTime);
     UnityPrint(unityMessage);
-    //if (events[i].tests != nullptr) { UnityPrint(events[i].tests->name()); }
     UNITY_PRINT_EOL();
   }
-
 }
 
 void decodingTest::run_tests() {
   currentDecodingTest = this;
   for (int i = 0; i < eventCount; i++) {
-    events[i].run_test();
+    if (events[i].tests != nullptr) {
+      currentEvent = &events[i];
+      
+      #ifdef INDIVIDUAL_TEST_REPORTS
+      events[i].run_tests();
+      #else
+      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
+      UnityDefaultTestRun(events[i].run_tests, unityMessage, __LINE__);
+      #endif
+    }
   }
 }
 
