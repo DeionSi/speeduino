@@ -31,6 +31,7 @@ void test0_setup() {
 
 testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 } };
 testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
+testParams test0_test0[] = { { testParams::REVCOUNT, 0 } };
 
 //TODO: a stalling test to verify all parameters are returned
 //TODO: Cranking tests
@@ -47,7 +48,7 @@ timedEvent test0_events[] {
   { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
   { .type = timedEvent::PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
   { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state0) }, // 1 (incl missing tooth 12)
-//  { .type = timedEvent::TEST,    .time = 13700,    .test = new testParams (testParams::REVCOUNT, 0), .state = nullptr },
+  { .type = timedEvent::TEST,    .time = 13700,    timedEventArrayTestEntry(test0_test0) },
   { .type = timedEvent::PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
   { .type = timedEvent::PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
   { .type = timedEvent::PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
