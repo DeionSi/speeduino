@@ -9,7 +9,7 @@
 const byte unityMessageLength = 200;
 char unityMessage[unityMessageLength];
 
-const char *timedTestTypeFriendlyName[] = {
+const char* const testParams::friendlyNames[] = {
   [ttt_SYNC] = "Sync",
   [ttt_HALFSYNC] = "Half-sync",
   [ttt_SYNCLOSSCOUNT] = "Sync-loss count",
@@ -98,14 +98,23 @@ void testParams::run_test() {
   //snprintf(unityMessage, unityMessageLength, "Test: %s", timedTestTypeFriendlyName[currentTest->type]);
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, timedTestTypeFriendlyName[currentTest->type]);
+    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, currentTest->name());
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, timedTestTypeFriendlyName[currentTest->type]);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, currentTest->name());
   }
 }
 
+const char* testParams::name() const {
+  return friendlyNames[this->type];
+}
+
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results) :
+type(a_type), time(a_time), tests(a_tests), testCount(a_testCount), results(a_results)
+{ };
+
 void timedEvent::execute() {
+  triggeredAt = micros();
   if (type == tet_PRITRIG) {
     triggerHandler();
   }
@@ -124,7 +133,7 @@ void timedEvent::run_test() {
       }
       currentTest = &tests[i];
       currentResult = &results[i];
-      UnityDefaultTestRun(tests[i].run_test, timedTestTypeFriendlyName[tests[i].type], __LINE__);
+      UnityDefaultTestRun(tests[i].run_test, tests[i].name(), __LINE__);
     }
   }
 }
@@ -150,8 +159,6 @@ void decodingTest::execute() {
   interrupts();
 
   // TODO: Everything below is to do:
-
-  uint32_t triggerLog[eventCount];
   uint32_t timingOffsetFrom0 = micros();
 
   for (int i = 0; i < eventCount; i++) {
@@ -165,8 +172,6 @@ void decodingTest::execute() {
     if (events[i].time < UINT32_MAX) { // UINT32_MAX Entries are parsed as soon as they are reached
       delayUntil(events[i].time + timingOffsetFrom0);
     }
-
-    triggerLog[i] = micros();
 
     events[i].execute();
 
@@ -183,14 +188,12 @@ void decodingTest::execute() {
   // Show a little log of times
   uint32_t lastTriggerTime = 0;
   for (int i = 0; i < eventCount; i++) {
-    uint32_t displayTime = triggerLog[i] - lastTriggerTime;
-    lastTriggerTime = triggerLog[i];
+    uint32_t displayTime = events[i].triggeredAt - lastTriggerTime;
+    lastTriggerTime = events[i].triggeredAt;
 
-    snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", triggerLog[i], triggerLog[i] - timingOffsetFrom0, displayTime);
+    snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", events[i].triggeredAt, events[i].triggeredAt - timingOffsetFrom0, displayTime);
     UnityPrint(unityMessage);
-    if (events[i].tests != nullptr) {
-      UnityPrint(timedTestTypeFriendlyName[events[i].tests->type]);
-    }
+    //if (events[i].tests != nullptr) { UnityPrint(events[i].tests->name()); }
     UNITY_PRINT_EOL();
   }
 
