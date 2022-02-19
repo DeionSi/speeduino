@@ -34,13 +34,16 @@ void delayUntil(uint32_t time) {
   }
 }
 
-testParams *currentTest;
+const testParams* currentTest;
+uint32_t *currentResult;
 testParams::testParams() {};
 testParams::testParams(const timedTestType a_type) : type(a_type) {};
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected) : type(a_type), expected(a_expected) {};
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
-void testParams::execute() {
+uint32_t testParams::execute() const {
+  uint32_t result = 0;
+
   switch(type) {
     case ttt_CRANKANGLE:
       result = getCrankAngle();
@@ -79,31 +82,26 @@ void testParams::execute() {
     default:
       break;
   }
+
+  return result;
 }
-
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, testParams* a_test, const byte a_testCount) : type(a_type), time(a_time), testCount(a_testCount) {
-  testParams *testsTemp = new testParams[a_testCount];
-  memcpy(testsTemp, a_test, a_testCount*sizeof(testParams));
-  test = testsTemp;
-};
-
 
 void testParams::run_test() {
   if(currentTest->type == ttt_IGNORE) {
     return;
   }
 
-  snprintf(unityMessage, unityMessageLength, "delta %u expected %lu result %lu ", currentTest->delta, currentTest->expected, currentTest->result);
+  snprintf(unityMessage, unityMessageLength, "delta %u expected %lu result %lu ", currentTest->delta, currentTest->expected, *currentResult);
   UnityPrint(unityMessage);
   for (int i = strlen(unityMessage); i < 40; i++) { UnityPrint(" "); } //Padding
 
   //snprintf(unityMessage, unityMessageLength, "Test: %s", timedTestTypeFriendlyName[currentTest->type]);
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, currentTest->result, timedTestTypeFriendlyName[currentTest->type]);
+    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, timedTestTypeFriendlyName[currentTest->type]);
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, currentTest->result, timedTestTypeFriendlyName[currentTest->type]);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, timedTestTypeFriendlyName[currentTest->type]);
   }
 }
 
@@ -111,21 +109,22 @@ void timedEvent::execute() {
   if (type == tet_PRITRIG) {
     triggerHandler();
   }
-  if (test != nullptr) {
+  if (tests != nullptr) {
     for (int i = 0; i < testCount; i++) {
-      test[i].execute();
+      results[i] = tests[i].execute();
     }
   }
 };
 
 void timedEvent::run_test() {
-  if (test != nullptr) {
+  if (tests != nullptr) {
     for (int i = 0; i < testCount; i++) {
-      if (test[i].type == ttt_IGNORE) {
+      if (tests[i].type == ttt_IGNORE) {
         continue;
       }
-      currentTest = &test[i];
-      UnityDefaultTestRun(test[i].run_test, timedTestTypeFriendlyName[test[i].type], __LINE__);
+      currentTest = &tests[i];
+      currentResult = &results[i];
+      UnityDefaultTestRun(tests[i].run_test, timedTestTypeFriendlyName[tests[i].type], __LINE__);
     }
   }
 }
@@ -189,8 +188,8 @@ void decodingTest::execute() {
 
     snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", triggerLog[i], triggerLog[i] - timingOffsetFrom0, displayTime);
     UnityPrint(unityMessage);
-    if (events[i].test != nullptr) {
-      UnityPrint(timedTestTypeFriendlyName[events[i].test->type]);
+    if (events[i].tests != nullptr) {
+      UnityPrint(timedTestTypeFriendlyName[events[i].tests->type]);
     }
     UNITY_PRINT_EOL();
   }

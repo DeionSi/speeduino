@@ -29,15 +29,10 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-testParams test0_state0[] = {
-  { ttt_SYNC, 0 },
-  { ttt_HALFSYNC, 0 },
-};
-testParams test0_state1[] = {
-  { ttt_SYNC, 1 },
-  { ttt_HALFSYNC, 0 },
-};
+testParams test0_state0[] = { { ttt_SYNC, 0 }, { ttt_HALFSYNC, 0 } };
+testParams test0_state1[] = { { ttt_SYNC, 1 }, { ttt_HALFSYNC, 0 } };
 
+//TODO: a stalling test to verify all parameters are returned
 //TODO: Automatic sorting of this list or relative time
 //TODO: Show test number on output
 //TODO: Cranking tests
