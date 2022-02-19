@@ -26,8 +26,8 @@ struct testParams {
   const uint16_t delta = 0;
   static const char* const friendlyNames[];
 
-  uint32_t execute() const;
-  static void run_test();
+  uint32_t getResult() const;
+  static void runTest();
   const char* name() const;
   testParams(const timedTestType, const uint32_t);
   testParams(const timedTestType, const uint32_t, const uint16_t);
@@ -47,8 +47,8 @@ struct timedEvent {
     TEST,
   } const type;
 
-  void execute();
-  static void run_tests();
+  void trigger();
+  static void runTests();
 
   const uint32_t time;
   const testParams* const tests;
@@ -59,20 +59,23 @@ struct timedEvent {
   timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results);
 };
 
+// TODO: structs into classes
 struct decodingTest {
   const char* const name;
-  void (*const decodingSetup)();
+  void (*const decoderSetup)();
   timedEvent* const events;
   const byte eventCount;
   uint32_t startTime = 0;
 
-  void verify_event_order() const;
+  void gatherResults();
+  bool verifyEventOrder() const;
   void execute();
-  void run_tests();
-  static void reset_decoding();
-  void show_triggerlog();
+  void decodingSetup();
+  void compareResults();
+  static void resetSpeeduino();
+  void showTriggerlog();
 
-  decodingTest(const char* const name, void (*const decodingSetup)(), timedEvent* const events, const byte eventCount);
+  decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
 #endif /* TEST_DECODING_H */

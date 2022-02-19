@@ -5,8 +5,8 @@
 #include "init.h"
 #include "test_decoding.h"
 
-#define INDIVIDUAL_TEST_REPORTS // Shows each test output rather than one per event
-#define INDIVIDUAL_TEST_REPORTS_DEBUG // Shows delta/expected/result for each individual test
+//#define INDIVIDUAL_TEST_REPORTS // Shows each test output rather than one per event
+//#define INDIVIDUAL_TEST_REPORTS_DEBUG // Shows delta/expected/result for each individual test
 
 // Global variables
 
@@ -49,7 +49,7 @@ const char* const testParams::friendlyNames[] = {
   [ENUMEND] = "enum end / invalid",
 };
 
-uint32_t testParams::execute() const {
+uint32_t testParams::getResult() const {
   uint32_t result = 0;
 
   switch(type) {
@@ -93,7 +93,7 @@ uint32_t testParams::execute() const {
   return result;
 }
 
-void testParams::run_test() {
+void testParams::runTest() {
 
   #ifdef INDIVIDUAL_TEST_REPORTS_DEBUG
   const char testMessageLength = 40;
@@ -104,10 +104,10 @@ void testParams::run_test() {
   #endif
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL(currentTest->expected, *currentResult);
+    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, currentTest->name());
   }
   else {
-    TEST_ASSERT_INT_WITHIN(currentTest->delta, currentTest->expected, *currentResult);
+    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, currentTest->name());
   }
 }
 
@@ -121,29 +121,29 @@ timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const
 type(a_type), time(a_time), tests(a_tests), testCount(a_testCount), results(a_results)
 { };
 
-void timedEvent::execute() {
+void timedEvent::trigger() {
   triggeredAt = micros();
   if (type == PRITRIG) {
     triggerHandler();
   }
   if (tests != nullptr) {
     for (int i = 0; i < testCount; i++) {
-      results[i] = tests[i].execute();
+      results[i] = tests[i].getResult();
     }
   }
 };
 
-void timedEvent::run_tests() {
+void timedEvent::runTests() {
   if (currentEvent->tests != nullptr) {
     for (int i = 0; i < currentEvent->testCount; i++) {
       currentTest = &currentEvent->tests[i];
       currentResult = &currentEvent->results[i];
 
       #ifdef INDIVIDUAL_TEST_REPORTS
-      snprintf(unityMessage, unityMessageLength, "'%s' triggered at %lu", currentEvent->tests[i].name(), currentEvent->triggeredAt - currentDecodingTest->startTime);
-      UnityDefaultTestRun(currentEvent->tests[i].run_test, unityMessage, __LINE__);
+      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu '%s'", currentEvent->time, currentEvent->triggeredAt - currentDecodingTest->startTime, currentEvent->tests[i].name() );
+      UnityDefaultTestRun(currentEvent->tests[i].runTest, unityMessage, __LINE__);
       #else
-      currentEvent->tests[i].run_test();
+      currentEvent->tests[i].runTest();
       #endif
     }
   }
@@ -151,26 +151,36 @@ void timedEvent::run_tests() {
 
 // decodingTest
 
-decodingTest::decodingTest(const char* const a_name, void (*const a_decodingSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decodingSetup(a_decodingSetup), events(a_events), eventCount(a_eventCount) { }
+decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
-void decodingTest::verify_event_order() const {
-  uint32_t lastEventTime = 0;
-  for (int i; i < eventCount; i++) {
-    if (events[i].time < lastEventTime) {
-      snprintf(unityMessage, unityMessageLength, "ERROR: Invalid time-order of events in decoding test '%s' event %lu", name, events[i].time);
-      UnityMessage(unityMessage, __LINE__);
-    }
-    lastEventTime = events[i].time;
+void decodingTest::execute() {
+  Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
+  UnityMessage(name, __LINE__);
+
+  if ( verifyEventOrder() ) {
+    decodingSetup();
+    gatherResults();
+    compareResults();
+    resetSpeeduino();
   }
 }
 
-void decodingTest::execute() {
-  // Don't get the previous test name on this INFO message
-  Unity.CurrentTestName = NULL;
+bool decodingTest::verifyEventOrder() const {
+  bool result = true;
+  uint32_t lastEventTime = 0;
+  for (int i; i < eventCount; i++) {
+    if (events[i].time < lastEventTime) {
+      snprintf(unityMessage, unityMessageLength, "ERROR: Out of sequence event %lu", events[i].time);
+      UnityMessage(unityMessage, __LINE__);
+      result = false;
+    }
+    lastEventTime = events[i].time;
+  }
+  return result;
+}
 
-  UnityMessage(name, __LINE__);
-
-  decodingSetup();
+void decodingTest::decodingSetup() {
+  decoderSetup();
 
   // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
   setPinMapping(3);
@@ -183,13 +193,16 @@ void decodingTest::execute() {
   detachInterrupt( digitalPinToInterrupt(pinTrigger2) );
   detachInterrupt( digitalPinToInterrupt(pinTrigger3) );
   interrupts();
+}
 
+void decodingTest::gatherResults() {
   // TODO: Everything below is to do:
   startTime = micros();
 
   for (int i = 0; i < eventCount; i++) {
     
     //Only perform calculations before a test. We don't need to recalculate before subsequent tests
+    //TODO: remove this
     if ( ( i == 0 || ( i > 0 && events[i-1].type != timedEvent::TEST ) ) && events[i].type == timedEvent::TEST) {
       currentStatus.RPM = getRPM();
       doCrankSpeedCalcs();
@@ -199,13 +212,29 @@ void decodingTest::execute() {
       delayUntil(events[i].time + startTime);
     }
 
-    events[i].execute();
+    events[i].trigger();
 
   }
 
 }
 
-void decodingTest::show_triggerlog() {
+void decodingTest::compareResults() {
+  currentDecodingTest = this;
+  for (int i = 0; i < eventCount; i++) {
+    if (events[i].tests != nullptr) {
+      currentEvent = &events[i];
+      
+      #ifdef INDIVIDUAL_TEST_REPORTS
+      events[i].runTests();
+      #else
+      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
+      UnityDefaultTestRun(events[i].runTests, unityMessage, __LINE__);
+      #endif
+    }
+  }
+}
+
+void decodingTest::showTriggerlog() {
   // Show a little log of times
   uint32_t lastTriggerTime = 0;
   for (int i = 0; i < eventCount; i++) {
@@ -218,23 +247,7 @@ void decodingTest::show_triggerlog() {
   }
 }
 
-void decodingTest::run_tests() {
-  currentDecodingTest = this;
-  for (int i = 0; i < eventCount; i++) {
-    if (events[i].tests != nullptr) {
-      currentEvent = &events[i];
-      
-      #ifdef INDIVIDUAL_TEST_REPORTS
-      events[i].run_tests();
-      #else
-      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
-      UnityDefaultTestRun(events[i].run_tests, unityMessage, __LINE__);
-      #endif
-    }
-  }
-}
-
-void decodingTest::reset_decoding() {
+void decodingTest::resetSpeeduino() {
   //This is from Speeduinos main loop which checks for engine stall/turn off and resets a bunch decoder related values
   //TODO: Use a function in speeduino to do this
   currentStatus.RPM = 0;
