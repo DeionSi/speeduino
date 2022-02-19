@@ -33,7 +33,6 @@ testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0
 testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
 
 //TODO: a stalling test to verify all parameters are returned
-//TODO: Show test number on output
 //TODO: Cranking tests
 timedEvent test0_events[] {
   { .type = timedEvent::PRITRIG, .time = 1000,     timedEventArrayTestEntry(test0_state0) }, // 1
@@ -83,7 +82,7 @@ timedEvent test0_events[] {
 decodingTest decodingTests[] = {
   {
   .name = "Missing tooth test 0, 12-1 wasted spark",
-  .decodingSetup = test0_setup,
+  .decoderSetup = test0_setup,
   .events = test0_events,
   .eventCount = countof(test0_events),
   },
@@ -91,10 +90,7 @@ decodingTest decodingTests[] = {
 
 void testDecodingMissingTooth() {
   for (auto testData : decodingTests) {
-    testData.verify_event_order();
     testData.execute();
-    testData.show_triggerlog();
-    testData.run_tests();
-    testData.reset_decoding();
+    testData.showTriggerlog();
   }
 }
