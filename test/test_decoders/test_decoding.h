@@ -66,6 +66,7 @@ struct decodingTest {
   const byte eventCount;
   uint32_t startTime = 0;
 
+  void verify_event_order() const;
   void execute();
   void run_tests();
   static void reset_decoding();
