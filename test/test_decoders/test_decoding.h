@@ -2,7 +2,7 @@
 #define TEST_DECODING_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define timedEventArrayTestEntry(testEntry) .test = testEntry, .testCount = countof(testEntry)
+#define timedEventArrayTestEntry(testEntry) .tests = testEntry, .testCount = countof(testEntry), .results = new uint32_t[countof(testEntry)]
 
 enum timedTestType {
   ttt_SYNC,
@@ -25,9 +25,8 @@ struct testParams {
   const timedTestType type = ttt_IGNORE;
   const uint32_t expected = 0;
   const uint16_t delta = 0;
-  uint32_t result = 0;
 
-  void execute();
+  uint32_t execute() const;
   static void run_test();
   testParams();
   testParams(const timedTestType);
@@ -52,16 +51,15 @@ struct timedEvent {
 
   const timedEventType type;
   const uint32_t time;
-  testParams *test;
+  const testParams* const tests;
   const byte testCount;
-  
-  timedEvent(const timedEventType type, const uint32_t time, testParams* test, const byte testCount);
+  uint32_t* const results;
 };
 
 struct decodingTest {
-  const char *name;
-  void (*decodingSetup)();
-  timedEvent *events;
+  const char* const name;
+  void (*const decodingSetup)();
+  timedEvent* const events;
   const byte eventCount;
 
   void execute();
