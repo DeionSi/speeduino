@@ -48,7 +48,7 @@ timedEvent test0_events[] {
   { .type = timedEvent::PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
   { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
   { .type = timedEvent::PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
-  { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state1) }, // 1 (incl missing tooth 12)
+  { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state0) }, // 1 (incl missing tooth 12)
 //  { .type = timedEvent::TEST,    .time = 13700,    .test = new testParams (testParams::REVCOUNT, 0), .state = nullptr },
   { .type = timedEvent::PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
   { .type = timedEvent::PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
@@ -93,6 +93,7 @@ decodingTest decodingTests[] = {
 void testDecodingMissingTooth() {
   for (auto testData : decodingTests) {
     testData.execute();
+    testData.show_triggerlog();
     testData.run_tests();
     testData.reset_decoding();
   }

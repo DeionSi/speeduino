@@ -20,18 +20,15 @@ struct testParams {
     STALLTIME,
     CRANKANGLE,
     ENUMEND,
-    IGNORE,  // special identifier causing a test to be ignored
-  } const type = IGNORE;
+  } const type;
 
-  const uint32_t expected = 0;
+  const uint32_t expected;
   const uint16_t delta = 0;
   static const char* const friendlyNames[];
 
   uint32_t execute() const;
   static void run_test();
   const char* name() const;
-  testParams();
-  testParams(const timedTestType);
   testParams(const timedTestType, const uint32_t);
   testParams(const timedTestType, const uint32_t, const uint16_t);
 
@@ -51,7 +48,7 @@ struct timedEvent {
   } const type;
 
   void execute();
-  void run_test();
+  static void run_tests();
 
   const uint32_t time;
   const testParams* const tests;
@@ -72,6 +69,7 @@ struct decodingTest {
   void execute();
   void run_tests();
   static void reset_decoding();
+  void show_triggerlog();
 
   decodingTest(const char* const name, void (*const decodingSetup)(), timedEvent* const events, const byte eventCount);
 };
