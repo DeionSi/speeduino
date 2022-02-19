@@ -29,56 +29,56 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-testParams test0_state0[] = { { ttt_SYNC, 0 }, { ttt_HALFSYNC, 0 } };
-testParams test0_state1[] = { { ttt_SYNC, 1 }, { ttt_HALFSYNC, 0 } };
+testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 } };
+testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
 
 //TODO: a stalling test to verify all parameters are returned
 //TODO: Automatic sorting of this list or relative time
 //TODO: Show test number on output
 //TODO: Cranking tests
 timedEvent test0_events[] {
-  { .type = tet_PRITRIG, .time = 1000,     timedEventArrayTestEntry(test0_state0) }, // 1
-  { .type = tet_PRITRIG, .time = 2000,     timedEventArrayTestEntry(test0_state0) }, // 2
-  { .type = tet_PRITRIG, .time = 3000,     timedEventArrayTestEntry(test0_state0) }, // 3
-  { .type = tet_PRITRIG, .time = 4000,     timedEventArrayTestEntry(test0_state0) }, // 4
-  { .type = tet_PRITRIG, .time = 5000,     timedEventArrayTestEntry(test0_state0) }, // 5
-  { .type = tet_PRITRIG, .time = 6000,     timedEventArrayTestEntry(test0_state0) }, // 6
-  { .type = tet_PRITRIG, .time = 7000,     timedEventArrayTestEntry(test0_state0) }, // 7
-  { .type = tet_PRITRIG, .time = 8000,     timedEventArrayTestEntry(test0_state0) }, // 8
-  { .type = tet_PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
-  { .type = tet_PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
-  { .type = tet_PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
-  { .type = tet_PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state1) }, // 1 (incl missing tooth 12)
-//  { .type = tet_TEST,    .time = 13700,    .test = new testParams (ttt_REVCOUNT, 0), .state = nullptr },
-  { .type = tet_PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
-  { .type = tet_PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
-  { .type = tet_PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
-/*  { .type = tet_PRITRIG, .time = 17000,    .test = nullptr }, // 5
-  { .type = tet_PRITRIG, .time = 18000,    .test = nullptr }, // 6
-  { .type = tet_PRITRIG, .time = 19000,    .test = nullptr }, // 7
-  { .type = tet_PRITRIG, .time = 20000,    .test = nullptr }, // 8
-  { .type = tet_PRITRIG, .time = 21000,    .test = nullptr }, // 9
-  { .type = tet_PRITRIG, .time = 22000,    .test = nullptr }, // 10
-  { .type = tet_PRITRIG, .time = 23000,    .test = nullptr }, // 11
-  { .type = tet_PRITRIG, .time = 25000,    .test = nullptr }, // 12+1 Missing tooth
-  { .type = tet_TEST,           .time = 25500,    .test = new testParams ( ttt_CRANKANGLE, 15) },
-  { .type = tet_PRITRIG, .time = 26000,    .test = nullptr }, // 2
-  { .type = tet_TEST,           .time = 26500,    .test = new testParams ( ttt_CRANKANGLE, 45) },
-  { .type = tet_PRITRIG, .time = 27000,    .test = nullptr }, // 3
-  { .type = tet_PRITRIG, .time = 28000,    .test = nullptr }, // 4
-  { .type = tet_PRITRIG, .time = 29000,    .test = nullptr }, // 5
-  { .type = tet_PRITRIG, .time = 30000,    .test = nullptr }, // 6
-  { .type = tet_PRITRIG, .time = 31000,    .test = nullptr }, // 7
-  { .type = tet_PRITRIG, .time = 32000,    .test = nullptr }, // 8
-  { .type = tet_PRITRIG, .time = 33000,    .test = nullptr }, // 9
-  { .type = tet_PRITRIG, .time = 34000,    .test = nullptr }, // 10
-  { .type = tet_PRITRIG, .time = 35000,    .test = nullptr }, // 11
-  { .type = tet_PRITRIG, .time = 37000,    .test = nullptr }, // 12+1 Missing tooth
-  { .type = tet_TEST,           .time = UINT32_MAX, .test = new testParams (ttt_SYNC,          1   ) },
-  { .type = tet_TEST,           .time = UINT32_MAX, .test = new testParams (ttt_HALFSYNC,      0   ) },
-  { .type = tet_TEST,           .time = UINT32_MAX, .test = new testParams (ttt_SYNCLOSSCOUNT, 0   ) },
-  { .type = tet_TEST,           .time = UINT32_MAX, .test = new testParams (ttt_RPM,           5000) },
-  { .type = tet_TEST,           .time = UINT32_MAX, .test = new testParams (ttt_REVCOUNT,      2   ) },*/
+  { .type = timedEvent::PRITRIG, .time = 1000,     timedEventArrayTestEntry(test0_state0) }, // 1
+  { .type = timedEvent::PRITRIG, .time = 2000,     timedEventArrayTestEntry(test0_state0) }, // 2
+  { .type = timedEvent::PRITRIG, .time = 3000,     timedEventArrayTestEntry(test0_state0) }, // 3
+  { .type = timedEvent::PRITRIG, .time = 4000,     timedEventArrayTestEntry(test0_state0) }, // 4
+  { .type = timedEvent::PRITRIG, .time = 5000,     timedEventArrayTestEntry(test0_state0) }, // 5
+  { .type = timedEvent::PRITRIG, .time = 6000,     timedEventArrayTestEntry(test0_state0) }, // 6
+  { .type = timedEvent::PRITRIG, .time = 7000,     timedEventArrayTestEntry(test0_state0) }, // 7
+  { .type = timedEvent::PRITRIG, .time = 8000,     timedEventArrayTestEntry(test0_state0) }, // 8
+  { .type = timedEvent::PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
+  { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
+  { .type = timedEvent::PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
+  { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state1) }, // 1 (incl missing tooth 12)
+//  { .type = timedEvent::TEST,    .time = 13700,    .test = new testParams (testParams::REVCOUNT, 0), .state = nullptr },
+  { .type = timedEvent::PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
+  { .type = timedEvent::PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
+  { .type = timedEvent::PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
+/*  { .type = timedEvent::PRITRIG, .time = 17000,    .test = nullptr }, // 5
+  { .type = timedEvent::PRITRIG, .time = 18000,    .test = nullptr }, // 6
+  { .type = timedEvent::PRITRIG, .time = 19000,    .test = nullptr }, // 7
+  { .type = timedEvent::PRITRIG, .time = 20000,    .test = nullptr }, // 8
+  { .type = timedEvent::PRITRIG, .time = 21000,    .test = nullptr }, // 9
+  { .type = timedEvent::PRITRIG, .time = 22000,    .test = nullptr }, // 10
+  { .type = timedEvent::PRITRIG, .time = 23000,    .test = nullptr }, // 11
+  { .type = timedEvent::PRITRIG, .time = 25000,    .test = nullptr }, // 12+1 Missing tooth
+  { .type = timedEvent::TEST,           .time = 25500,    .test = new testParams ( testParams::CRANKANGLE, 15) },
+  { .type = timedEvent::PRITRIG, .time = 26000,    .test = nullptr }, // 2
+  { .type = timedEvent::TEST,           .time = 26500,    .test = new testParams ( testParams::CRANKANGLE, 45) },
+  { .type = timedEvent::PRITRIG, .time = 27000,    .test = nullptr }, // 3
+  { .type = timedEvent::PRITRIG, .time = 28000,    .test = nullptr }, // 4
+  { .type = timedEvent::PRITRIG, .time = 29000,    .test = nullptr }, // 5
+  { .type = timedEvent::PRITRIG, .time = 30000,    .test = nullptr }, // 6
+  { .type = timedEvent::PRITRIG, .time = 31000,    .test = nullptr }, // 7
+  { .type = timedEvent::PRITRIG, .time = 32000,    .test = nullptr }, // 8
+  { .type = timedEvent::PRITRIG, .time = 33000,    .test = nullptr }, // 9
+  { .type = timedEvent::PRITRIG, .time = 34000,    .test = nullptr }, // 10
+  { .type = timedEvent::PRITRIG, .time = 35000,    .test = nullptr }, // 11
+  { .type = timedEvent::PRITRIG, .time = 37000,    .test = nullptr }, // 12+1 Missing tooth
+  { .type = timedEvent::TEST,           .time = UINT32_MAX, .test = new testParams (testParams::SYNC,          1   ) },
+  { .type = timedEvent::TEST,           .time = UINT32_MAX, .test = new testParams (testParams::HALFSYNC,      0   ) },
+  { .type = timedEvent::TEST,           .time = UINT32_MAX, .test = new testParams (testParams::SYNCLOSSCOUNT, 0   ) },
+  { .type = timedEvent::TEST,           .time = UINT32_MAX, .test = new testParams (testParams::RPM,           5000) },
+  { .type = timedEvent::TEST,           .time = UINT32_MAX, .test = new testParams (testParams::REVCOUNT,      2   ) },*/
 };
 
 decodingTest decodingTests[] = {
