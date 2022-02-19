@@ -25,9 +25,11 @@ struct testParams {
   const timedTestType type = ttt_IGNORE;
   const uint32_t expected = 0;
   const uint16_t delta = 0;
+  static const char* const friendlyNames[];
 
   uint32_t execute() const;
   static void run_test();
+  const char* name() const;
   testParams();
   testParams(const timedTestType);
   testParams(const timedTestType, const uint32_t);
@@ -54,6 +56,9 @@ struct timedEvent {
   const testParams* const tests;
   const byte testCount;
   uint32_t* const results;
+  uint32_t triggeredAt = 0;
+
+  timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results);
 };
 
 struct decodingTest {
