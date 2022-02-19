@@ -33,7 +33,6 @@ testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0
 testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
 
 //TODO: a stalling test to verify all parameters are returned
-//TODO: Automatic sorting of this list or relative time
 //TODO: Show test number on output
 //TODO: Cranking tests
 timedEvent test0_events[] {
@@ -92,6 +91,7 @@ decodingTest decodingTests[] = {
 
 void testDecodingMissingTooth() {
   for (auto testData : decodingTests) {
+    testData.verify_event_order();
     testData.execute();
     testData.show_triggerlog();
     testData.run_tests();

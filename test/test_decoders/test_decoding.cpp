@@ -151,7 +151,18 @@ void timedEvent::run_tests() {
 
 // decodingTest
 
-decodingTest::decodingTest(const char* const a_name, void (*const a_decodingSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decodingSetup(a_decodingSetup), events(a_events), eventCount(a_eventCount) { } ;
+decodingTest::decodingTest(const char* const a_name, void (*const a_decodingSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decodingSetup(a_decodingSetup), events(a_events), eventCount(a_eventCount) { }
+
+void decodingTest::verify_event_order() const {
+  uint32_t lastEventTime = 0;
+  for (int i; i < eventCount; i++) {
+    if (events[i].time < lastEventTime) {
+      snprintf(unityMessage, unityMessageLength, "ERROR: Invalid time-order of events in decoding test '%s' event %lu", name, events[i].time);
+      UnityMessage(unityMessage, __LINE__);
+    }
+    lastEventTime = events[i].time;
+  }
+}
 
 void decodingTest::execute() {
   // Don't get the previous test name on this INFO message
