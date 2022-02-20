@@ -6,15 +6,16 @@
 #include "test_decoding.h"
 
 const bool individual_test_reports = true; // Shows each test output rather than one per event
-const bool individual_test_reports_debug = false; // Shows delta/expected/result for each individual test
+const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
 
 // Global variables
 
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
-uint32_t *currentResult;
+testResults *currentResult;
 timedEvent *currentEvent;
+timedEvent *previousEvent;
 const testParams* currentTest;
 decodingTest* currentDecodingTest;
 
@@ -45,6 +46,9 @@ uint32_t testParams::getResult() const {
     case CRANKANGLE:
       result = getCrankAngle();
       break;
+    case RPM:
+      result = getRPM();
+      break;
     case SYNC:
       result = currentStatus.hasSync;
       break;
@@ -53,9 +57,6 @@ uint32_t testParams::getResult() const {
       break;
     case SYNCLOSSCOUNT:
       result = currentStatus.syncLossCounter;
-      break;
-    case RPM:
-      result = getRPM();
       break;
     case REVCOUNT:
       result = currentStatus.startRevolutions;
@@ -84,19 +85,30 @@ uint32_t testParams::getResult() const {
 
 void testParams::runTest() {
 
+  uint32_t expected = currentTest->expected;
+
+  // Calculate our crank angle compare angle based on how much time passed until test
+  if (currentTest->type == testParams::CRANKANGLE && previousEvent != nullptr) {
+    uint32_t interval = currentEvent->triggeredAt - previousEvent->triggeredAt;
+    uint32_t degrees = currentEvent->crankDegrees - previousEvent->crankDegrees;
+    float usPerDegree = (float)interval / (float)degrees;
+    uint32_t delay = currentResult->retrievedAt - currentEvent->triggeredAt;
+    expected = currentEvent->crankDegrees + ((float)delay / usPerDegree);
+  }
+
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
     char testMessage[testMessageLength];
-    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", *currentResult, currentTest->expected, currentTest->delta);
+    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", currentResult->value, expected, currentTest->delta);
     UnityPrint(testMessage);
     for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
   }
 
   if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, currentTest->name());
+    TEST_ASSERT_EQUAL_MESSAGE(expected, currentResult->value, currentTest->name());
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, currentTest->expected, *currentResult, currentTest->name());
+    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, expected, currentResult->value, currentTest->name());
   }
 }
 
@@ -106,11 +118,8 @@ const char* testParams::name() const {
 
 // timedEvent
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results) :
-type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests)
-{ };
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results, uint32_t const a_crankMilliDegrees) :
-type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests), crankMilliDegrees(a_crankMilliDegrees)
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, uint16_t const a_crankDegrees) :
+type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests), crankDegrees(a_crankDegrees)
 { };
 
 void timedEvent::trigger() {
@@ -130,7 +139,8 @@ void timedEvent::trigger() {
   if (tests != nullptr) {
     preTestsCommands();
     for (int i = 0; i < testCount; i++) {
-      results[i] = tests[i].getResult();
+      results[i].retrievedAt = micros();
+      results[i].value = tests[i].getResult();
     }
   }
 };
@@ -151,12 +161,14 @@ void timedEvent::runTests() {
       currentResult = &currentEvent->results[i];
 
       if (individual_test_reports) {
-        snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu '%s'", currentEvent->time, currentEvent->triggeredAt - currentDecodingTest->startTime, currentEvent->tests[i].name() );
+        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", currentEvent->time, currentResult->retrievedAt - currentDecodingTest->startTime, currentEvent->tests[i].name() );
         UnityDefaultTestRun(currentEvent->tests[i].runTest, unityMessage, __LINE__);
       }
       else {
         currentEvent->tests[i].runTest();
       }
+
+      previousEvent = currentEvent;
     }
   }
 }
@@ -166,7 +178,13 @@ void timedEvent::runTests() {
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
 void decodingTest::execute() {
+  // Reset globals for subsequent tests
+  currentResult = nullptr;
+  currentEvent = nullptr;
+  previousEvent = nullptr;
+  currentTest = nullptr;
   currentDecodingTest = this;
+
   Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
   UnityMessage(name, __LINE__);
 
