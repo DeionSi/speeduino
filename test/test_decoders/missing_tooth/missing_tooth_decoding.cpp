@@ -29,7 +29,7 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 } };
+testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 }, { testParams::REVCOUNT, 0 } };
 testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
 testParams test0_test0[] = { { testParams::REVCOUNT, 0 } };
 
@@ -45,14 +45,14 @@ timedEvent test0_events[] {
   { .type = timedEvent::PRITRIG, .time = 7000,     timedEventArrayTestEntry(test0_state0) }, // 7
   { .type = timedEvent::PRITRIG, .time = 8000,     timedEventArrayTestEntry(test0_state0) }, // 8
   { .type = timedEvent::PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
-  { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
+/*  { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
   { .type = timedEvent::PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
   { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state0) }, // 1 (incl missing tooth 12)
   { .type = timedEvent::TEST,    .time = 13700,    timedEventArrayTestEntry(test0_test0) },
   { .type = timedEvent::PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
   { .type = timedEvent::PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
   { .type = timedEvent::PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
-/*  { .type = timedEvent::PRITRIG, .time = 17000,    .test = nullptr }, // 5
+  { .type = timedEvent::PRITRIG, .time = 17000,    .test = nullptr }, // 5
   { .type = timedEvent::PRITRIG, .time = 18000,    .test = nullptr }, // 6
   { .type = timedEvent::PRITRIG, .time = 19000,    .test = nullptr }, // 7
   { .type = timedEvent::PRITRIG, .time = 20000,    .test = nullptr }, // 8

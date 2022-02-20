@@ -5,8 +5,8 @@
 #include "init.h"
 #include "test_decoding.h"
 
-//#define INDIVIDUAL_TEST_REPORTS // Shows each test output rather than one per event
-//#define INDIVIDUAL_TEST_REPORTS_DEBUG // Shows delta/expected/result for each individual test
+const bool individual_test_reports = false; // Shows each test output rather than one per event
+const bool individual_test_reports_debug = false; // Shows delta/expected/result for each individual test
 
 // Global variables
 
@@ -17,17 +17,6 @@ uint32_t *currentResult;
 timedEvent *currentEvent;
 const testParams* currentTest;
 decodingTest* currentDecodingTest;
-
-// TODO: replace with timers
-
-void delayUntil(uint32_t time) {
-  if (micros() < time) { // No delay if we have already passed
-    if (time >= 12000) { // Make sure we don't compare against negative time
-      while (micros() < time - 12000) { delay(10); } // Delay in MILLIseconds until we can delay in MICROseconds
-    }
-    delayMicroseconds(time - micros()); // Remaining delay in MICROseconds
-  }
-}
 
 // testParams
 
@@ -95,13 +84,13 @@ uint32_t testParams::getResult() const {
 
 void testParams::runTest() {
 
-  #ifdef INDIVIDUAL_TEST_REPORTS_DEBUG
-  const char testMessageLength = 40;
-  char testMessage[testMessageLength];
-  snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", *currentResult, currentTest->expected, currentTest->delta);
-  UnityPrint(testMessage);
-  for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
-  #endif
+  if (individual_test_reports_debug) {
+    const char testMessageLength = 40;
+    char testMessage[testMessageLength];
+    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", *currentResult, currentTest->expected, currentTest->delta);
+    UnityPrint(testMessage);
+    for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
+  }
 
   if (currentTest->delta == 0) {
     TEST_ASSERT_EQUAL_MESSAGE(currentTest->expected, *currentResult, currentTest->name());
@@ -118,20 +107,44 @@ const char* testParams::name() const {
 // timedEvent
 
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results) :
-type(a_type), time(a_time), tests(a_tests), testCount(a_testCount), results(a_results)
+type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests)
 { };
 
 void timedEvent::trigger() {
+  // Delay until it's time to trigger
+  if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
+    delayUntil(time + currentDecodingTest->startTime);
+  }
+
   triggeredAt = micros();
+
+  // Execute any actions
   if (type == PRITRIG) {
     triggerHandler();
   }
+
+  // Get data from tests
   if (tests != nullptr) {
+    preTestsCommands();
     for (int i = 0; i < testCount; i++) {
       results[i] = tests[i].getResult();
     }
   }
 };
+
+void timedEvent::preTestsCommands() {
+  currentStatus.RPM = getRPM();
+  doCrankSpeedCalcs();
+}
+
+void timedEvent::delayUntil(uint32_t time) {
+  if (micros() < time) { // No delay if we have already passed
+    /*if (time >= 12000) { // Make sure we don't compare against negative time
+      while (micros() < time - 12000) { delay(10); } // Delay in MILLIseconds until we can delay in MICROseconds
+    }*/
+    delayMicroseconds(time - micros()); // Remaining delay in MICROseconds
+  }
+}
 
 void timedEvent::runTests() {
   if (currentEvent->tests != nullptr) {
@@ -139,12 +152,13 @@ void timedEvent::runTests() {
       currentTest = &currentEvent->tests[i];
       currentResult = &currentEvent->results[i];
 
-      #ifdef INDIVIDUAL_TEST_REPORTS
-      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu '%s'", currentEvent->time, currentEvent->triggeredAt - currentDecodingTest->startTime, currentEvent->tests[i].name() );
-      UnityDefaultTestRun(currentEvent->tests[i].runTest, unityMessage, __LINE__);
-      #else
-      currentEvent->tests[i].runTest();
-      #endif
+      if (individual_test_reports) {
+        snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu '%s'", currentEvent->time, currentEvent->triggeredAt - currentDecodingTest->startTime, currentEvent->tests[i].name() );
+        UnityDefaultTestRun(currentEvent->tests[i].runTest, unityMessage, __LINE__);
+      }
+      else {
+        currentEvent->tests[i].runTest();
+      }
     }
   }
 }
@@ -154,6 +168,7 @@ void timedEvent::runTests() {
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
 void decodingTest::execute() {
+  currentDecodingTest = this;
   Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
   UnityMessage(name, __LINE__);
 
@@ -196,40 +211,24 @@ void decodingTest::decodingSetup() {
 }
 
 void decodingTest::gatherResults() {
-  // TODO: Everything below is to do:
   startTime = micros();
-
   for (int i = 0; i < eventCount; i++) {
-    
-    //Only perform calculations before a test. We don't need to recalculate before subsequent tests
-    //TODO: remove this
-    if ( ( i == 0 || ( i > 0 && events[i-1].type != timedEvent::TEST ) ) && events[i].type == timedEvent::TEST) {
-      currentStatus.RPM = getRPM();
-      doCrankSpeedCalcs();
-    }
-
-    if (events[i].time < UINT32_MAX) { // UINT32_MAX Entries are parsed as soon as they are reached
-      delayUntil(events[i].time + startTime);
-    }
-
     events[i].trigger();
-
   }
-
 }
 
 void decodingTest::compareResults() {
-  currentDecodingTest = this;
   for (int i = 0; i < eventCount; i++) {
     if (events[i].tests != nullptr) {
       currentEvent = &events[i];
       
-      #ifdef INDIVIDUAL_TEST_REPORTS
-      events[i].runTests();
-      #else
-      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
-      UnityDefaultTestRun(events[i].runTests, unityMessage, __LINE__);
-      #endif
+      if (individual_test_reports) {
+        events[i].runTests();
+      }
+      else {
+        snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
+        UnityDefaultTestRun(events[i].runTests, unityMessage, __LINE__);
+      }
     }
   }
 }
