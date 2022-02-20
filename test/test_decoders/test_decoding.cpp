@@ -5,7 +5,7 @@
 #include "init.h"
 #include "test_decoding.h"
 
-const bool individual_test_reports = false; // Shows each test output rather than one per event
+const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = false; // Shows delta/expected/result for each individual test
 
 // Global variables
@@ -109,6 +109,9 @@ const char* testParams::name() const {
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results) :
 type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests)
 { };
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results, uint32_t const a_crankMilliDegrees) :
+type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests), crankMilliDegrees(a_crankMilliDegrees)
+{ };
 
 void timedEvent::trigger() {
   // Delay until it's time to trigger
@@ -138,12 +141,7 @@ void timedEvent::preTestsCommands() {
 }
 
 void timedEvent::delayUntil(uint32_t time) {
-  if (micros() < time) { // No delay if we have already passed
-    /*if (time >= 12000) { // Make sure we don't compare against negative time
-      while (micros() < time - 12000) { delay(10); } // Delay in MILLIseconds until we can delay in MICROseconds
-    }*/
-    delayMicroseconds(time - micros()); // Remaining delay in MICROseconds
-  }
+  while(micros() < time) {};
 }
 
 void timedEvent::runTests() {
