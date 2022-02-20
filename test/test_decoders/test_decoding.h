@@ -2,7 +2,7 @@
 #define TEST_DECODING_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define timedEventArrayTestEntry(testEntry) .tests = testEntry, .testCount = countof(testEntry), .results = new uint32_t[countof(testEntry)]
+#define timedEventArrayTestEntry(testEntry) testEntry, countof(testEntry), new uint32_t[countof(testEntry)]
 
 
 class testParams {
@@ -62,13 +62,14 @@ class timedEvent {
   public:
     const uint32_t time;
     const testParams* const tests;
+    const uint32_t crankMilliDegrees = 0;
     uint32_t triggeredAt = 0;
 
     void trigger();
     static void runTests();
 
-
     timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results);
+    timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results, const uint32_t crankMilliDegrees);
 };
 
 class decodingTest {

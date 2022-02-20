@@ -29,30 +29,30 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 }, { testParams::REVCOUNT, 0 } };
+testParams test0_state0[] = { { testParams::SYNC, 0 }, { testParams::HALFSYNC, 0 } };
 testParams test0_state1[] = { { testParams::SYNC, 1 }, { testParams::HALFSYNC, 0 } };
 testParams test0_test0[] = { { testParams::REVCOUNT, 0 } };
 
 //TODO: a stalling test to verify all parameters are returned
 //TODO: Cranking tests
 timedEvent test0_events[] {
-  { .type = timedEvent::PRITRIG, .time = 1000,     timedEventArrayTestEntry(test0_state0) }, // 1
-  { .type = timedEvent::PRITRIG, .time = 2000,     timedEventArrayTestEntry(test0_state0) }, // 2
-  { .type = timedEvent::PRITRIG, .time = 3000,     timedEventArrayTestEntry(test0_state0) }, // 3
-  { .type = timedEvent::PRITRIG, .time = 4000,     timedEventArrayTestEntry(test0_state0) }, // 4
-  { .type = timedEvent::PRITRIG, .time = 5000,     timedEventArrayTestEntry(test0_state0) }, // 5
-  { .type = timedEvent::PRITRIG, .time = 6000,     timedEventArrayTestEntry(test0_state0) }, // 6
-  { .type = timedEvent::PRITRIG, .time = 7000,     timedEventArrayTestEntry(test0_state0) }, // 7
-  { .type = timedEvent::PRITRIG, .time = 8000,     timedEventArrayTestEntry(test0_state0) }, // 8
-  { .type = timedEvent::PRITRIG, .time = 9000,     timedEventArrayTestEntry(test0_state0) }, // 9
-/*  { .type = timedEvent::PRITRIG, .time = 10000,    timedEventArrayTestEntry(test0_state0) }, // 10
-  { .type = timedEvent::PRITRIG, .time = 11000,    timedEventArrayTestEntry(test0_state0) }, // 11
-  { .type = timedEvent::PRITRIG, .time = 13000,    timedEventArrayTestEntry(test0_state0) }, // 1 (incl missing tooth 12)
-  { .type = timedEvent::TEST,    .time = 13700,    timedEventArrayTestEntry(test0_test0) },
-  { .type = timedEvent::PRITRIG, .time = 14000,    timedEventArrayTestEntry(test0_state1) }, // 2
-  { .type = timedEvent::PRITRIG, .time = 15000,    timedEventArrayTestEntry(test0_state1) }, // 3
-  { .type = timedEvent::PRITRIG, .time = 16000,    timedEventArrayTestEntry(test0_state1) }, // 4
-  { .type = timedEvent::PRITRIG, .time = 17000,    .test = nullptr }, // 5
+  { timedEvent::PRITRIG, 1000,     timedEventArrayTestEntry(test0_state0), 1000UL*0 }, // 1
+  { timedEvent::PRITRIG, 2000,     timedEventArrayTestEntry(test0_state0), 1000UL*30 }, // 2
+  { timedEvent::PRITRIG, 3000,     timedEventArrayTestEntry(test0_state0), 1000UL*60 }, // 3
+  { timedEvent::PRITRIG, 4000,     timedEventArrayTestEntry(test0_state0), 1000UL*90 }, // 4
+  { timedEvent::PRITRIG, 5000,     timedEventArrayTestEntry(test0_state0), 1000UL*120 }, // 5
+  { timedEvent::PRITRIG, 6000,     timedEventArrayTestEntry(test0_state0), 1000UL*150 }, // 6
+  { timedEvent::PRITRIG, 7000,     timedEventArrayTestEntry(test0_state0), 1000UL*180 }, // 7
+  { timedEvent::PRITRIG, 8000,     timedEventArrayTestEntry(test0_state0), 1000UL*210 }, // 8
+  { timedEvent::PRITRIG, 9000,     timedEventArrayTestEntry(test0_state0), 1000UL*240 }, // 9
+  { timedEvent::PRITRIG, 10000,    timedEventArrayTestEntry(test0_state0), 1000UL*270  }, // 10
+  { timedEvent::PRITRIG, 11000,    timedEventArrayTestEntry(test0_state0), 1000UL*300 }, // 11
+  { timedEvent::PRITRIG, 13000,    timedEventArrayTestEntry(test0_state0), 1000UL*0 }, // 1 (incl missing tooth 12)
+  { timedEvent::TEST,    13700,    timedEventArrayTestEntry(test0_test0),  1000UL*30 },
+  { timedEvent::PRITRIG, 14000,    timedEventArrayTestEntry(test0_state1), 1000UL*60 }, // 2
+  { timedEvent::PRITRIG, 15000,    timedEventArrayTestEntry(test0_state1), 1000UL*90 }, // 3
+  { timedEvent::PRITRIG, 16000,    timedEventArrayTestEntry(test0_state1), 1000UL*120 }, // 4
+/*  { .type = timedEvent::PRITRIG, .time = 17000,    .test = nullptr }, // 5
   { .type = timedEvent::PRITRIG, .time = 18000,    .test = nullptr }, // 6
   { .type = timedEvent::PRITRIG, .time = 19000,    .test = nullptr }, // 7
   { .type = timedEvent::PRITRIG, .time = 20000,    .test = nullptr }, // 8
@@ -81,12 +81,7 @@ timedEvent test0_events[] {
 };
 
 decodingTest decodingTests[] = {
-  {
-  .name = "Missing tooth test 0, 12-1 wasted spark",
-  .decoderSetup = test0_setup,
-  .events = test0_events,
-  .eventCount = countof(test0_events),
-  },
+  { "Missing tooth test 0, 12-1 wasted spark", test0_setup, test0_events, countof(test0_events) },
 };
 
 void testDecodingMissingTooth() {
