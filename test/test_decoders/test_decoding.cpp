@@ -90,7 +90,11 @@ void testParams::runTest() {
   // Calculate our crank angle compare angle based on how much time passed until test
   if (currentTest->type == testParams::CRANKANGLE && previousEvent != nullptr) {
     uint32_t interval = currentEvent->triggeredAt - previousEvent->triggeredAt;
-    uint32_t degrees = currentEvent->crankDegrees - previousEvent->crankDegrees;
+
+    int16_t previousCrankDegrees = previousEvent->crankDegrees;
+    while(previousCrankDegrees > currentEvent->crankDegrees) { previousCrankDegrees -= 360; }
+    uint32_t degrees = currentEvent->crankDegrees - previousCrankDegrees;
+
     float usPerDegree = (float)interval / (float)degrees;
     uint32_t delay = currentResult->retrievedAt - currentEvent->triggeredAt;
     expected = currentEvent->crankDegrees + ((float)delay / usPerDegree);
@@ -168,7 +172,6 @@ void timedEvent::runTests() {
         currentEvent->tests[i].runTest();
       }
 
-      previousEvent = currentEvent;
     }
   }
 }
@@ -235,8 +238,9 @@ void decodingTest::gatherResults() {
 
 void decodingTest::compareResults() {
   for (int i = 0; i < eventCount; i++) {
+    currentEvent = &events[i];
+
     if (events[i].tests != nullptr) {
-      currentEvent = &events[i];
       
       if (individual_test_reports) {
         events[i].runTests();
@@ -245,7 +249,10 @@ void decodingTest::compareResults() {
         snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
         UnityDefaultTestRun(events[i].runTests, unityMessage, __LINE__);
       }
+      
     }
+    
+    previousEvent = currentEvent;
   }
 }
 

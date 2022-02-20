@@ -66,7 +66,7 @@ class timedEvent {
   public:
     const uint32_t time;
     const testParams* const tests;
-    const uint16_t crankDegrees = 0;
+    const int16_t crankDegrees = 0;
     uint32_t triggeredAt = 0;
 
     void trigger();
