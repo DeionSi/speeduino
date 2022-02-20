@@ -5,32 +5,36 @@
 #define timedEventArrayTestEntry(testEntry) .tests = testEntry, .testCount = countof(testEntry), .results = new uint32_t[countof(testEntry)]
 
 
-struct testParams {
+class testParams {
+  public:
+    enum timedTestType {
+      SYNC,
+      HALFSYNC,
+      SYNCLOSSCOUNT,
+      REVCOUNT,
+      TOOTHANGLECORRECT,
+      TOOTHANGLE,
+      LASTTOOTHTIME,
+      LASTTOOTHTIMEMINUSONE,
+      RPM,
+      STALLTIME,
+      CRANKANGLE,
+      ENUMEND,
+    };
 
-  enum timedTestType {
-    SYNC,
-    HALFSYNC,
-    SYNCLOSSCOUNT,
-    REVCOUNT,
-    TOOTHANGLECORRECT,
-    TOOTHANGLE,
-    LASTTOOTHTIME,
-    LASTTOOTHTIMEMINUSONE,
-    RPM,
-    STALLTIME,
-    CRANKANGLE,
-    ENUMEND,
-  } const type;
+  private:
+    static const char* const friendlyNames[];
+    const timedTestType type;
+    const uint32_t expected;
+    const uint16_t delta = 0;
 
-  const uint32_t expected;
-  const uint16_t delta = 0;
-  static const char* const friendlyNames[];
+  public:
 
-  uint32_t getResult() const;
-  static void runTest();
-  const char* name() const;
-  testParams(const timedTestType, const uint32_t);
-  testParams(const timedTestType, const uint32_t, const uint16_t);
+    uint32_t getResult() const;
+    static void runTest();
+    const char* name() const;
+    testParams(const timedTestType, const uint32_t);
+    testParams(const timedTestType, const uint32_t, const uint16_t);
 
 };
 
@@ -40,42 +44,51 @@ struct testParams {
 // hard: crankangle, MAX_STALL_TIME
 
 
-struct timedEvent {
+class timedEvent {
+  public:
+    enum timedEventType {
+      PRITRIG,
+      TEST,
+    };
 
-  enum timedEventType {
-    PRITRIG,
-    TEST,
-  } const type;
+  private:
+    const timedEventType type;
+    const byte testCount;
+    uint32_t* const results;
 
-  void trigger();
-  static void runTests();
+    void preTestsCommands();
+    static void delayUntil(uint32_t time);
 
-  const uint32_t time;
-  const testParams* const tests;
-  const byte testCount;
-  uint32_t* const results;
-  uint32_t triggeredAt = 0;
+  public:
+    const uint32_t time;
+    const testParams* const tests;
+    uint32_t triggeredAt = 0;
 
-  timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results);
+    void trigger();
+    static void runTests();
+
+
+    timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, uint32_t* const a_results);
 };
 
-// TODO: structs into classes
-struct decodingTest {
-  const char* const name;
-  void (*const decoderSetup)();
-  timedEvent* const events;
-  const byte eventCount;
-  uint32_t startTime = 0;
+class decodingTest {
+  private:
+    const char* const name;
+    void (*const decoderSetup)();
+    timedEvent* const events;
+    const byte eventCount;
 
-  void gatherResults();
-  bool verifyEventOrder() const;
-  void execute();
-  void decodingSetup();
-  void compareResults();
-  static void resetSpeeduino();
-  void showTriggerlog();
+    void gatherResults();
+    bool verifyEventOrder() const;
+    void decodingSetup();
+    void compareResults();
+    static void resetSpeeduino();
 
-  decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
+  public:
+    uint32_t startTime = 0;
+    void execute();
+    void showTriggerlog();
+    decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
 #endif /* TEST_DECODING_H */
