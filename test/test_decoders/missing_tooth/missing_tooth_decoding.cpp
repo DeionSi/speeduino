@@ -94,7 +94,7 @@ timedEvent test0_events[] {
   { timedEvent::PRITRIG, 21000,    timedEventArrayTestEntry(test0_state1), 240 }, // 9
   { timedEvent::PRITRIG, 22000,    timedEventArrayTestEntry(test0_state1), 270 }, // 10
   { timedEvent::PRITRIG, 23000,    timedEventArrayTestEntry(test0_state1), 300 }, // 11
-  { timedEvent::PRITRIG, 25000,    timedEventArrayTestEntry(test0_state2_tooth1), 0 }, // 12+1 // TODO Missing tooth //this doesn't fail with 0 ????????
+  { timedEvent::PRITRIG, 25000,    timedEventArrayTestEntry(test0_state2_tooth1), 0 }, // 12+1
   { timedEvent::TEST,    25500,    timedEventArrayTestEntry(test0_crank),  15 },
   { timedEvent::PRITRIG, 26000,    timedEventArrayTestEntry(test0_state2), 30 }, // 2
   { timedEvent::PRITRIG, 27000,    timedEventArrayTestEntry(test0_state2), 60 }, // 3
