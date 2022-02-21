@@ -15,7 +15,7 @@ char unityMessage[unityMessageLength];
 
 testResults *currentResult;
 timedEvent *currentEvent;
-timedEvent *previousEvent;
+timedEvent *lastPRITRIGevent;
 const testParams* currentTest;
 decodingTest* currentDecodingTest;
 
@@ -86,24 +86,20 @@ uint32_t testParams::getResult() const {
 void testParams::runTest() {
 
   uint32_t expected = currentTest->expected;
-
+//TODO: maybe move some static variables out of classes?
   // Calculate our crank angle compare angle based on how much time passed until test
-  if (currentTest->type == testParams::CRANKANGLE && previousEvent != nullptr) {
-    uint32_t interval = currentEvent->triggeredAt - previousEvent->triggeredAt;
-
-    int16_t previousCrankDegrees = previousEvent->crankDegrees;
-    while(previousCrankDegrees > currentEvent->crankDegrees) { previousCrankDegrees -= 360; }
-    uint32_t degrees = currentEvent->crankDegrees - previousCrankDegrees;
-
-    float usPerDegree = (float)interval / (float)degrees;
-    uint32_t delay = currentResult->retrievedAt - currentEvent->triggeredAt;
-    expected = currentEvent->crankDegrees + ((float)delay / usPerDegree);
+  if (currentTest->type == testParams::CRANKANGLE && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
+    uint32_t delay = currentResult->retrievedAt - lastPRITRIGevent->triggeredAt;
+    expected = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
   }
   else if (currentTest->type == testParams::LASTTOOTHTIME) {
     expected = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
   }
   else if (currentTest->type == testParams::LASTTOOTHTIMEMINUSONE) {
     expected = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
+  }
+  else if (currentTest->type == testParams::TOOTHANGLE && decodingTest::testLastToothDegrees > 0) {
+    expected = decodingTest::testLastToothDegrees;
   }
 
   if (individual_test_reports_debug) {
@@ -128,9 +124,11 @@ const char* testParams::name() const {
 
 // timedEvent
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, uint16_t const a_crankDegrees) :
-testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), crankDegrees(a_crankDegrees)
-{ };
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, const testTooth* const a_tooth) :
+testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
+
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
+testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
 
 void timedEvent::trigger() {
   // Delay until it's time to trigger
@@ -186,16 +184,19 @@ void timedEvent::runTests() {
 
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
-uint32_t decodingTest::startTime = 0;
-uint32_t decodingTest::testLastToothTime = 0;
-uint32_t decodingTest::testLastToothMinusOneTime = 0;
+uint32_t decodingTest::startTime;
+uint32_t decodingTest::testLastToothTime;
+uint32_t decodingTest::testLastToothMinusOneTime;
+float decodingTest::testLastUsPerDegree;
+float decodingTest::testLastToothDegrees;
 
 void decodingTest::execute() {
   // Reset globals for subsequent tests
   currentResult = nullptr;
   currentEvent = nullptr;
-  previousEvent = nullptr;
+  lastPRITRIGevent = nullptr;
   currentTest = nullptr;
+  testLastUsPerDegree = 0;
   currentDecodingTest = this;
 
   Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
@@ -229,7 +230,7 @@ void decodingTest::decodingSetup() {
   // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
   setPinMapping(3);
 
-  // initaliseTriggers attaches interrupts to trigger functions, so disabled interrupts, detach them and enable interrupts again
+  // initaliseTriggers attaches interrupts to trigger functions, so: disable, detach and reenable interrupts
   // Interrupts are needed for micros() function
   noInterrupts();
   initialiseTriggers();
@@ -253,6 +254,16 @@ void decodingTest::compareResults() {
     if (events[i].type == timedEvent::PRITRIG) {
       testLastToothMinusOneTime = testLastToothTime;
       testLastToothTime = events[i].triggeredAt;
+
+      if (lastPRITRIGevent != nullptr) {
+        uint32_t interval = currentEvent->triggeredAt - lastPRITRIGevent->triggeredAt;
+        testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
+
+        testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
+
+      }
+
+      lastPRITRIGevent = currentEvent;
     }
 
     if (events[i].tests != nullptr) {
@@ -267,7 +278,6 @@ void decodingTest::compareResults() {
       
     }
     
-    previousEvent = currentEvent;
   }
 }
 
