@@ -99,6 +99,12 @@ void testParams::runTest() {
     uint32_t delay = currentResult->retrievedAt - currentEvent->triggeredAt;
     expected = currentEvent->crankDegrees + ((float)delay / usPerDegree);
   }
+  else if (currentTest->type == testParams::LASTTOOTHTIME) {
+    expected = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
+  }
+  else if (currentTest->type == testParams::LASTTOOTHTIMEMINUSONE) {
+    expected = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
+  }
 
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
@@ -123,7 +129,7 @@ const char* testParams::name() const {
 // timedEvent
 
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, uint16_t const a_crankDegrees) :
-type(a_type), testCount(a_testCount), results(a_results), time(a_time), tests(a_tests), crankDegrees(a_crankDegrees)
+testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), crankDegrees(a_crankDegrees)
 { };
 
 void timedEvent::trigger() {
@@ -179,6 +185,10 @@ void timedEvent::runTests() {
 // decodingTest
 
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
+
+uint32_t decodingTest::startTime = 0;
+uint32_t decodingTest::testLastToothTime = 0;
+uint32_t decodingTest::testLastToothMinusOneTime = 0;
 
 void decodingTest::execute() {
   // Reset globals for subsequent tests
@@ -239,6 +249,11 @@ void decodingTest::gatherResults() {
 void decodingTest::compareResults() {
   for (int i = 0; i < eventCount; i++) {
     currentEvent = &events[i];
+
+    if (events[i].type == timedEvent::PRITRIG) {
+      testLastToothMinusOneTime = testLastToothTime;
+      testLastToothTime = events[i].triggeredAt;
+    }
 
     if (events[i].tests != nullptr) {
       

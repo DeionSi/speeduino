@@ -56,7 +56,6 @@ class timedEvent {
     };
 
   private:
-    const timedEventType type;
     const byte testCount;
     testResults* const results;
 
@@ -64,6 +63,7 @@ class timedEvent {
     static void delayUntil(uint32_t time);
 
   public:
+    const timedEventType type;
     const uint32_t time;
     const testParams* const tests;
     const int16_t crankDegrees = 0;
@@ -89,7 +89,9 @@ class decodingTest {
     static void resetSpeeduino();
 
   public:
-    uint32_t startTime = 0;
+    static uint32_t startTime;
+    static uint32_t testLastToothTime;
+    static uint32_t testLastToothMinusOneTime;
     void execute();
     void showTriggerlog();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
