@@ -38,6 +38,7 @@ testParams test0_state1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
+  { testParams::RPM, 5000 },
 };
 testParams test0_state2_tooth1[] = {
   { testParams::SYNC, 1 },
@@ -46,11 +47,11 @@ testParams test0_state2_tooth1[] = {
   { testParams::REVCOUNT, 1 },
   { testParams::TOOTHANGLECORRECT, 1 }, // different
   { testParams::TOOTHANGLE, 60 }, // different
-  { testParams::LASTTOOTHTIME, 0 }, // todo, calculate otf
-  { testParams::LASTTOOTHTIMEMINUSONE, 0 }, // todo, calculate otf
-  { testParams::RPM, 0 }, // todo, calculate otf
+  { testParams::LASTTOOTHTIME, 0, 4 },
+  { testParams::LASTTOOTHTIMEMINUSONE, 0, 4 },
+  { testParams::RPM, 5000 }, // todo, calculate otf
   { testParams::STALLTIME, 0 }, // todo
-  { testParams::CRANKANGLE, 0 },
+  { testParams::CRANKANGLE, 0, 1 },
 };
 testParams test0_state2[] = {
   { testParams::SYNC, 1 },
@@ -59,14 +60,14 @@ testParams test0_state2[] = {
   { testParams::REVCOUNT, 1 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE, 30 },
-  { testParams::LASTTOOTHTIME, 0 }, // todo, calculate otf
-  { testParams::LASTTOOTHTIMEMINUSONE, 0 }, // todo, calculate otf
-  { testParams::RPM, 0 }, // todo, calculate otf
+  { testParams::LASTTOOTHTIME, 0, 4 },
+  { testParams::LASTTOOTHTIMEMINUSONE, 0, 4 },
+  { testParams::RPM, 5000 },
   { testParams::STALLTIME, 0 }, // todo
-  { testParams::CRANKANGLE, 0 },
+  { testParams::CRANKANGLE, 0, 1 },
 };
 testParams test0_crank[] = {
-  { testParams::CRANKANGLE, 0 }
+  { testParams::CRANKANGLE, 0, 1 }
 };
 
 //TODO: a stalling test to verify all parameters are returned
@@ -83,7 +84,7 @@ timedEvent test0_events[] {
   { timedEvent::PRITRIG, 9000,     timedEventArrayTestEntry(test0_state0), 240 }, // 9
   { timedEvent::PRITRIG, 10000,    timedEventArrayTestEntry(test0_state0), 270  }, // 10
   { timedEvent::PRITRIG, 11000,    timedEventArrayTestEntry(test0_state0), 300 }, // 11
-  { timedEvent::PRITRIG, 13000,    timedEventArrayTestEntry(test0_state0), 0 }, // 1 (incl missing tooth 12)
+  { timedEvent::PRITRIG, 13000,    timedEventArrayTestEntry(test0_state1), 0 }, // 1 (incl missing tooth 12)
   { timedEvent::PRITRIG, 14000,    timedEventArrayTestEntry(test0_state1), 30 }, // 2
   { timedEvent::PRITRIG, 15000,    timedEventArrayTestEntry(test0_state1), 60 }, // 3
   { timedEvent::PRITRIG, 16000,    timedEventArrayTestEntry(test0_state1), 90  }, // 4
