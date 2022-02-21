@@ -38,20 +38,8 @@ testParams test0_state1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::RPM, 5000 },
-};
-testParams test0_state2_tooth1[] = {
-  { testParams::SYNC, 1 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::REVCOUNT, 1 },
-  { testParams::TOOTHANGLECORRECT, 1 }, // different
-  { testParams::TOOTHANGLE, 60 }, // different
-  { testParams::LASTTOOTHTIME, 0, 4 },
-  { testParams::LASTTOOTHTIMEMINUSONE, 0, 4 },
-  { testParams::RPM, 5000 }, // todo, calculate otf
-  { testParams::STALLTIME, 0 }, // todo
-  { testParams::CRANKANGLE, 0, 1 },
+  { testParams::RPM, 5000, 2 }, // TODO: Shouldn't RPM be available when in sync?
+  { testParams::CRANKANGLE, 0, 1 }, // TODO: Shouldn't RPM be available when in sync?
 };
 testParams test0_state2[] = {
   { testParams::SYNC, 1 },
@@ -59,10 +47,10 @@ testParams test0_state2[] = {
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 1 },
   { testParams::TOOTHANGLECORRECT, 1 },
-  { testParams::TOOTHANGLE, 30 },
+  { testParams::TOOTHANGLE, 0 },
   { testParams::LASTTOOTHTIME, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE, 0, 4 },
-  { testParams::RPM, 5000 },
+  { testParams::RPM, 5000, 2 },
   { testParams::STALLTIME, 0 }, // todo
   { testParams::CRANKANGLE, 0, 1 },
 };
@@ -70,36 +58,48 @@ testParams test0_crank[] = {
   { testParams::CRANKANGLE, 0, 1 }
 };
 
+testTooth mt_t1  { 0, 30 };
+testTooth mt_t2  { 30, 30 };
+testTooth mt_t3  { 60, 30 };
+testTooth mt_t4  { 90, 30 };
+testTooth mt_t5  { 120, 30 };
+testTooth mt_t6  { 150, 30 };
+testTooth mt_t7  { 180, 30 };
+testTooth mt_t8  { 210, 30 };
+testTooth mt_t9  { 240, 30 };
+testTooth mt_t10 { 270, 30 };
+testTooth mt_t11 { 300, 60 };
+
 //TODO: a stalling test to verify all parameters are returned
 //TODO: Cranking tests
 timedEvent test0_events[] {
-  { timedEvent::PRITRIG, 1000,     timedEventArrayTestEntry(test0_state0), 0 }, // 1
-  { timedEvent::PRITRIG, 2000,     timedEventArrayTestEntry(test0_state0), 30 }, // 2
-  { timedEvent::PRITRIG, 3000,     timedEventArrayTestEntry(test0_state0), 60 }, // 3
-  { timedEvent::PRITRIG, 4000,     timedEventArrayTestEntry(test0_state0), 90 }, // 4
-  { timedEvent::PRITRIG, 5000,     timedEventArrayTestEntry(test0_state0), 120 }, // 5
-  { timedEvent::PRITRIG, 6000,     timedEventArrayTestEntry(test0_state0), 150 }, // 6
-  { timedEvent::PRITRIG, 7000,     timedEventArrayTestEntry(test0_state0), 180 }, // 7
-  { timedEvent::PRITRIG, 8000,     timedEventArrayTestEntry(test0_state0), 210 }, // 8
-  { timedEvent::PRITRIG, 9000,     timedEventArrayTestEntry(test0_state0), 240 }, // 9
-  { timedEvent::PRITRIG, 10000,    timedEventArrayTestEntry(test0_state0), 270  }, // 10
-  { timedEvent::PRITRIG, 11000,    timedEventArrayTestEntry(test0_state0), 300 }, // 11
-  { timedEvent::PRITRIG, 13000,    timedEventArrayTestEntry(test0_state1), 0 }, // 1 (incl missing tooth 12)
-  { timedEvent::PRITRIG, 14000,    timedEventArrayTestEntry(test0_state1), 30 }, // 2
-  { timedEvent::PRITRIG, 15000,    timedEventArrayTestEntry(test0_state1), 60 }, // 3
-  { timedEvent::PRITRIG, 16000,    timedEventArrayTestEntry(test0_state1), 90  }, // 4
-  { timedEvent::PRITRIG, 17000,    timedEventArrayTestEntry(test0_state1), 120 }, // 
-  { timedEvent::PRITRIG, 18000,    timedEventArrayTestEntry(test0_state1), 150 }, // 6
-  { timedEvent::PRITRIG, 19000,    timedEventArrayTestEntry(test0_state1), 180 }, // 7
-  { timedEvent::PRITRIG, 20000,    timedEventArrayTestEntry(test0_state1), 210 }, // 8
-  { timedEvent::PRITRIG, 21000,    timedEventArrayTestEntry(test0_state1), 240 }, // 9
-  { timedEvent::PRITRIG, 22000,    timedEventArrayTestEntry(test0_state1), 270 }, // 10
-  { timedEvent::PRITRIG, 23000,    timedEventArrayTestEntry(test0_state1), 300 }, // 11
-  { timedEvent::PRITRIG, 25000,    timedEventArrayTestEntry(test0_state2_tooth1), 0 }, // 12+1
-  { timedEvent::TEST,    25500,    timedEventArrayTestEntry(test0_crank),  15 },
-  { timedEvent::PRITRIG, 26000,    timedEventArrayTestEntry(test0_state2), 30 }, // 2
-  { timedEvent::PRITRIG, 27000,    timedEventArrayTestEntry(test0_state2), 60 }, // 3
-  { timedEvent::PRITRIG, 28000,    timedEventArrayTestEntry(test0_state2), 90 }, // 4
+  { timedEvent::PRITRIG, 1000,     timedEventArrayTestEntry(test0_state0), &mt_t1 },
+  { timedEvent::PRITRIG, 2000,     timedEventArrayTestEntry(test0_state0), &mt_t2 },
+  { timedEvent::PRITRIG, 3000,     timedEventArrayTestEntry(test0_state0), &mt_t3 },
+  { timedEvent::PRITRIG, 4000,     timedEventArrayTestEntry(test0_state0), &mt_t4 },
+  { timedEvent::PRITRIG, 5000,     timedEventArrayTestEntry(test0_state0), &mt_t5 },
+  { timedEvent::PRITRIG, 6000,     timedEventArrayTestEntry(test0_state0), &mt_t6 },
+  { timedEvent::PRITRIG, 7000,     timedEventArrayTestEntry(test0_state0), &mt_t7 },
+  { timedEvent::PRITRIG, 8000,     timedEventArrayTestEntry(test0_state0), &mt_t8 },
+  { timedEvent::PRITRIG, 9000,     timedEventArrayTestEntry(test0_state0), &mt_t9 },
+  { timedEvent::PRITRIG, 10000,    timedEventArrayTestEntry(test0_state0), &mt_t10 },
+  { timedEvent::PRITRIG, 11000,    timedEventArrayTestEntry(test0_state0), &mt_t11 },
+  { timedEvent::PRITRIG, 13000,    timedEventArrayTestEntry(test0_state1), &mt_t1 },
+  { timedEvent::PRITRIG, 14000,    timedEventArrayTestEntry(test0_state1), &mt_t2 },
+  { timedEvent::PRITRIG, 15000,    timedEventArrayTestEntry(test0_state1), &mt_t3 },
+  { timedEvent::PRITRIG, 16000,    timedEventArrayTestEntry(test0_state1), &mt_t4 },
+  { timedEvent::PRITRIG, 17000,    timedEventArrayTestEntry(test0_state1), &mt_t5 },
+  { timedEvent::PRITRIG, 18000,    timedEventArrayTestEntry(test0_state1), &mt_t6 },
+  { timedEvent::PRITRIG, 19000,    timedEventArrayTestEntry(test0_state1), &mt_t7 },
+  { timedEvent::PRITRIG, 20000,    timedEventArrayTestEntry(test0_state1), &mt_t8 },
+  { timedEvent::PRITRIG, 21000,    timedEventArrayTestEntry(test0_state1), &mt_t9 },
+  { timedEvent::PRITRIG, 22000,    timedEventArrayTestEntry(test0_state1), &mt_t10 },
+  { timedEvent::PRITRIG, 23000,    timedEventArrayTestEntry(test0_state1), &mt_t11 },
+  { timedEvent::PRITRIG, 25000,    timedEventArrayTestEntry(test0_state2), &mt_t1 },
+  { timedEvent::TEST,    25500,    timedEventArrayTestEntry(test0_crank) },
+  { timedEvent::PRITRIG, 26000,    timedEventArrayTestEntry(test0_state2), &mt_t2 },
+  { timedEvent::PRITRIG, 27000,    timedEventArrayTestEntry(test0_state2), &mt_t3 },
+  { timedEvent::PRITRIG, 28000,    timedEventArrayTestEntry(test0_state2), &mt_t4 },
 /*  { .type = timedEvent::PRITRIG, .time = 29000,    .test = nullptr }, // 5
   { .type = timedEvent::PRITRIG, .time = 30000,    .test = nullptr }, // 6
   { .type = timedEvent::PRITRIG, .time = 31000,    .test = nullptr }, // 7

@@ -4,6 +4,11 @@
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
 #define timedEventArrayTestEntry(testEntry) testEntry, countof(testEntry), new testResults[countof(testEntry)]
 
+struct testTooth {
+  uint16_t angle;
+  uint16_t degrees;
+};
+
 struct testResults {
   uint32_t value;
   uint32_t retrievedAt;
@@ -66,13 +71,14 @@ class timedEvent {
     const timedEventType type;
     const uint32_t time;
     const testParams* const tests;
-    const int16_t crankDegrees = 0;
+    const testTooth* const tooth = nullptr;
     uint32_t triggeredAt = 0;
 
     void trigger();
     static void runTests();
 
-    timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, const uint16_t crankDegrees);
+    timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results, const testTooth* const tooth);
+    timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results);
 };
 
 class decodingTest {
@@ -92,6 +98,8 @@ class decodingTest {
     static uint32_t startTime;
     static uint32_t testLastToothTime;
     static uint32_t testLastToothMinusOneTime;
+    static float testLastUsPerDegree;
+    static float testLastToothDegrees;
     void execute();
     void showTriggerlog();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
