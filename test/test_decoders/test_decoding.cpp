@@ -1,3 +1,20 @@
+/* Decoder expected outputs
+ * currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings)
+ * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested
+ * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded) or decoder internally loses sync but regains it with unchanged sync or halfsync variables. Is never reset (only wraps itself on overflow)
+ * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
+ *
+ * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync, resets at stall. TODO resets at sync loss??
+ * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss??
+ * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss??
+ * triggerToothAngle - The angle between the last two teeth. Must always be valid if in sync or half-sync 
+ * 
+ * getRPM() - Must always return the rpm if in sync or halfsync
+ * getCrankAngle() - Must always return the crankangle if in sync or halfsync
+ * 
+ * triggerToothAngleIsCorrect - Must always be true
+ */
+
 #include "arduino.h"
 #include "decoders.h"
 #include "crankMaths.h"
@@ -88,18 +105,21 @@ void testParams::runTest() {
   uint32_t expected = currentTest->expected;
 //TODO: maybe move some static variables out of classes?
   // Calculate our crank angle compare angle based on how much time passed until test
-  if (currentTest->type == testParams::CRANKANGLE && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
+  if (currentTest->type == CRANKANGLE && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
     uint32_t delay = currentResult->retrievedAt - lastPRITRIGevent->triggeredAt;
     expected = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
   }
-  else if (currentTest->type == testParams::LASTTOOTHTIME) {
+  else if (currentTest->type == LASTTOOTHTIME) {
     expected = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
   }
-  else if (currentTest->type == testParams::LASTTOOTHTIMEMINUSONE) {
+  else if (currentTest->type == LASTTOOTHTIMEMINUSONE) {
     expected = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
   }
-  else if (currentTest->type == testParams::TOOTHANGLE && decodingTest::testLastToothDegrees > 0) {
+  else if (currentTest->type == TOOTHANGLE) {
     expected = decodingTest::testLastToothDegrees;
+  }
+  else if (currentTest->type == STALLTIME && lastPRITRIGevent != nullptr) {
+    expected = lastPRITRIGevent->tooth->degrees * 3333UL;
   }
 
   if (individual_test_reports_debug) {
