@@ -4,6 +4,12 @@
 #include "decoders.h"
 #include "../test_decoding.h"
 
+/* Instructions:
+ * Don't start tests on tooth one (unless there is only one tooth ofcourse)
+ * Tooth one is identified by 0 angle
+ * 
+ */
+
 void test0_setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
   configPage4.triggerTeeth = 12; //TODO: Use different values
@@ -39,11 +45,12 @@ testParams test0_state1[] = {
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 0 },
+  { testParams::REVTIME_c, 0, 50 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::RPM, 5000, 2 }, // This test cannot be more precise because of micros() rounding to every 4th
+  { testParams::RPM, 5000, 20 }, // This test cannot be more precise because of micros() rounding to every 4th
   { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
@@ -52,11 +59,12 @@ testParams test0_state2[] = {
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 1 },
+  { testParams::REVTIME_c, 50 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::RPM, 5000, 2 }, // This test cannot be more precise because of micros() rounding to every 4th
+  { testParams::RPM, 5000, 20 }, // This test cannot be more precise because of micros() rounding to every 4th
   { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
