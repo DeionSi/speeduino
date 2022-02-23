@@ -21,6 +21,7 @@ class testParams {
       HALFSYNC,
       SYNCLOSSCOUNT,
       REVCOUNT,
+      REVTIME_c,
       TOOTHANGLECORRECT,
       TOOTHANGLE_c,
       LASTTOOTHTIME_c,
@@ -94,7 +95,9 @@ class decodingTest {
     static uint32_t testLastToothTime;
     static uint32_t testLastToothMinusOneTime;
     static float testLastUsPerDegree;
-    static float testLastToothDegrees;
+    static uint16_t testLastToothDegrees;
+    static uint32_t testToothOneTime;
+    static uint32_t testRevolutionTime;
     void execute();
     void showTriggerlog();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);

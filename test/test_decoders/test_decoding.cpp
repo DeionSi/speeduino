@@ -1,19 +1,19 @@
 /* Decoder expected outputs
  * currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings)
  * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested
- * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded) or decoder internally loses sync but regains it with unchanged sync or halfsync variables. Is never reset (only wraps itself on overflow)
- * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
+ * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow)
  *
  * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync, resets at stall. TODO resets at sync loss??
- * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss??
- * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss??
+ * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap
+ * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap
  * triggerToothAngle - The angle between the last two teeth. Must always be valid if in sync or half-sync
- * revolutionTime - The time in microseconds for a 360 crank revolution. Must always be valid if in sync or half-sync //TODO: add tests
+ * revolutionTime - The time in microseconds for a 360 crank revolution. Must always be valid if in sync or half-sync
  * 
  * getRPM() - Must always return the rpm if in sync or halfsync
- * getCrankAngle() - Must always return the crankangle if in sync or halfsync
+ * getCrankAngle() - Must always return the crankangle if in sync (over 360 or 720 depending on sync) or halfsync (over 360)
  * 
  * triggerToothAngleIsCorrect - Must always be true
+ * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
  * 
  * TODO: specify which variable is normally set where
  */
@@ -49,6 +49,7 @@ const char* const testParams::friendlyNames[] = {
   [HALFSYNC] = "Half-sync",
   [SYNCLOSSCOUNT] = "Sync-loss count",
   [REVCOUNT] = "Revolution count",
+  [REVTIME_c] = "Revolution time",
   [TOOTHANGLECORRECT] = "Tooth angle is correct",
   [TOOTHANGLE_c] = "Tooth angle",
   [LASTTOOTHTIME_c] = "Last tooth time",
@@ -82,6 +83,9 @@ uint32_t testParams::getResult() const {
       break;
     case REVCOUNT:
       result = currentStatus.startRevolutions;
+      break;
+    case REVTIME_c:
+      result = revolutionTime;
       break;
     case TOOTHANGLECORRECT:
       result = triggerToothAngleIsCorrect;
@@ -124,6 +128,9 @@ void testParams::runTest() {
       break;
     case LASTTOOTHTIMEMINUSONE_c:
       expectedCalculated = decodingTest::testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+      break;
+    case REVTIME_c:
+      expectedCalculated = decodingTest::testRevolutionTime;
       break;
     case TOOTHANGLE_c:
       expectedCalculated = decodingTest::testLastToothDegrees;
@@ -231,15 +238,24 @@ uint32_t decodingTest::startTime;
 uint32_t decodingTest::testLastToothTime;
 uint32_t decodingTest::testLastToothMinusOneTime;
 float decodingTest::testLastUsPerDegree;
-float decodingTest::testLastToothDegrees;
+uint16_t decodingTest::testLastToothDegrees;
+uint32_t decodingTest::testToothOneTime;
+uint32_t decodingTest::testRevolutionTime;
 
 void decodingTest::execute() {
   // Reset globals for subsequent tests
+  startTime = 0;
+  testLastToothTime = 0;
+  testLastToothMinusOneTime = 0;
+  testLastUsPerDegree = 0;
+  testLastToothDegrees = 0;
+  testToothOneTime = 0;
+  testRevolutionTime = 0;
+  
   currentResult = nullptr;
   currentEvent = nullptr;
   lastPRITRIGevent = nullptr;
   currentTest = nullptr;
-  testLastUsPerDegree = 0;
   currentDecodingTest = this;
 
   Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
@@ -297,6 +313,13 @@ void decodingTest::compareResults() {
     if (events[i].type == timedEvent::PRITRIG) {
       testLastToothMinusOneTime = testLastToothTime;
       testLastToothTime = events[i].triggeredAt;
+
+      if (events[i].tooth->angle == 0) {
+        if (testToothOneTime > 0) {
+          testRevolutionTime = events[i].triggeredAt - testToothOneTime;
+        }
+        testToothOneTime = events[i].triggeredAt;
+      }
 
       if (lastPRITRIGevent != nullptr) {
         uint32_t interval = currentEvent->triggeredAt - lastPRITRIGevent->triggeredAt;
