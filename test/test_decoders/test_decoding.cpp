@@ -7,12 +7,15 @@
  * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync, resets at stall. TODO resets at sync loss??
  * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss??
  * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss??
- * triggerToothAngle - The angle between the last two teeth. Must always be valid if in sync or half-sync 
+ * triggerToothAngle - The angle between the last two teeth. Must always be valid if in sync or half-sync
+ * revolutionTime - The time in microseconds for a 360 crank revolution. Must always be valid if in sync or half-sync //TODO: add tests
  * 
  * getRPM() - Must always return the rpm if in sync or halfsync
  * getCrankAngle() - Must always return the crankangle if in sync or halfsync
  * 
  * triggerToothAngleIsCorrect - Must always be true
+ * 
+ * TODO: specify which variable is normally set where
  */
 
 #include "arduino.h"
@@ -21,8 +24,6 @@
 #include "unity.h"
 #include "init.h"
 #include "test_decoding.h"
-
-// TODO: A new micros function which has better precision than 1 micros
 
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
@@ -119,10 +120,10 @@ void testParams::runTest() {
       }
       break;
     case LASTTOOTHTIME_c:
-      expectedCalculated = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
+      expectedCalculated = decodingTest::testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
       break;
     case LASTTOOTHTIMEMINUSONE_c:
-      expectedCalculated = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
+      expectedCalculated = decodingTest::testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
       break;
     case TOOTHANGLE_c:
       expectedCalculated = decodingTest::testLastToothDegrees;
@@ -133,9 +134,9 @@ void testParams::runTest() {
       }
       break;
     case RPM_c_deltaPerThousand:
-      if (currentDecodingTest->testLastToothMinusOneTime > 0 && currentDecodingTest->testLastToothTime > 0) {
-        uint32_t delay = currentDecodingTest->testLastToothTime - currentDecodingTest->testLastToothMinusOneTime;
-        expectedCalculated = (60000000.0f / delay) / ( 360.0f / lastPRITRIGevent->tooth->degrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
+      if (decodingTest::testLastToothMinusOneTime > 0 && decodingTest::testLastToothTime > 0) {
+        uint32_t delay = decodingTest::testLastToothTime - decodingTest::testLastToothMinusOneTime;
+        expectedCalculated = (60000000.0f / delay) / ( 360.0f / decodingTest::testLastToothDegrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
         //expected = ( 500000.0f * lastPRITRIGevent->tooth->degrees ) / ( delay * 3.0f ); // This converts delay in microseconds and degrees to revolutions per minute
         deltaCalculated = deltaCalculated * expectedCalculated / 1000;
       }
