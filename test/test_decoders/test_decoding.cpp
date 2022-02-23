@@ -111,27 +111,37 @@ void testParams::runTest() {
 
 //TODO: maybe move some static variables out of classes?
   // Calculate our crank angle compare angle based on how much time passed until test
-  if (currentTest->type == CRANKANGLE_c && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
-    uint32_t delay = currentResult->retrievedAt - lastPRITRIGevent->triggeredAt;
-    expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
-  }
-  else if (currentTest->type == LASTTOOTHTIME_c) {
-    expectedCalculated = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
-  }
-  else if (currentTest->type == LASTTOOTHTIMEMINUSONE_c) {
-    expectedCalculated = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
-  }
-  else if (currentTest->type == TOOTHANGLE_c) {
-    expectedCalculated = decodingTest::testLastToothDegrees;
-  }
-  else if (currentTest->type == STALLTIME_c && lastPRITRIGevent != nullptr) {
-    expectedCalculated = lastPRITRIGevent->tooth->degrees * 3333UL; // 3333,33 microseconds per degree at 50 revolutions per minute
-  }
-  else if (currentTest->type == RPM_c_deltaPerThousand && currentDecodingTest->testLastToothMinusOneTime > 0 && currentDecodingTest->testLastToothTime > 0) {
-    uint32_t delay = currentDecodingTest->testLastToothTime - currentDecodingTest->testLastToothMinusOneTime;
-    expectedCalculated = (60000000.0f / delay) / ( 360.0f / lastPRITRIGevent->tooth->degrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
-    //expected = ( 500000.0f * lastPRITRIGevent->tooth->degrees ) / ( delay * 3.0f ); // This converts delay in microseconds and degrees to revolutions per minute
-    deltaCalculated = deltaCalculated * expectedCalculated / 1000;
+  switch(currentTest->type) {
+    case CRANKANGLE_c:
+      if (decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
+        uint32_t delay = currentResult->retrievedAt - lastPRITRIGevent->triggeredAt;
+        expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
+      }
+      break;
+    case LASTTOOTHTIME_c:
+      expectedCalculated = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
+      break;
+    case LASTTOOTHTIMEMINUSONE_c:
+      expectedCalculated = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
+      break;
+    case TOOTHANGLE_c:
+      expectedCalculated = decodingTest::testLastToothDegrees;
+      break;
+    case STALLTIME_c:
+      if (lastPRITRIGevent != nullptr) {
+        expectedCalculated = lastPRITRIGevent->tooth->degrees * 3333UL; // 3333,33 microseconds per degree at 50 revolutions per minute
+      }
+      break;
+    case RPM_c_deltaPerThousand:
+      if (currentDecodingTest->testLastToothMinusOneTime > 0 && currentDecodingTest->testLastToothTime > 0) {
+        uint32_t delay = currentDecodingTest->testLastToothTime - currentDecodingTest->testLastToothMinusOneTime;
+        expectedCalculated = (60000000.0f / delay) / ( 360.0f / lastPRITRIGevent->tooth->degrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
+        //expected = ( 500000.0f * lastPRITRIGevent->tooth->degrees ) / ( delay * 3.0f ); // This converts delay in microseconds and degrees to revolutions per minute
+        deltaCalculated = deltaCalculated * expectedCalculated / 1000;
+      }
+      break;
+    default:
+      break;
   }
 
   if (individual_test_reports_debug) {
