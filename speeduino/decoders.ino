@@ -216,34 +216,6 @@ void loggerSecondaryISR()
   }
 }
 
-/** Compute RPM.
-* As nearly all the decoders use a common method of determining RPM (The time the last full revolution took) A common function is simpler.
-* @param degreesOver - the number of crank degrees between tooth #1s. Some patterns have a tooth #1 every crank rev, others are every cam rev.
-* @return RPM
-*/
-static inline uint16_t stdGetRPM(uint16_t degreesOver)
-{
-  uint16_t tempRPM = 0;
-
-  if( currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) )
-  {
-    if( (currentStatus.RPM < currentStatus.crankRPM) && (currentStatus.startRevolutions == 0) ) { tempRPM = 0; } //Prevents crazy RPM spike when there has been less than 1 full revolution
-    else if( (toothOneTime == 0) || (toothOneMinusOneTime == 0) ) { tempRPM = 0; }
-    else
-    {
-      noInterrupts();
-      revolutionTime = (toothOneTime - toothOneMinusOneTime); //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
-      interrupts();
-      if(degreesOver == 720) { revolutionTime = revolutionTime / 2; }
-      tempRPM = (US_IN_MINUTE / revolutionTime); //Calc RPM based on last full revolution time (Faster as /)
-      if(tempRPM >= MAX_RPM) { tempRPM = currentStatus.RPM; } //Sanity check
-    }
-  }
-  else { tempRPM = 0; }
-
-  return tempRPM;
-}
-
 /**
  * Sets the new filter time based on the current settings.
  * This ONLY works for even spaced decoders.
@@ -269,7 +241,7 @@ static inline int crankingGetRPM(byte totalTeeth, uint16_t degreesOver)
   uint16_t tempRPM = 0;
   if( (currentStatus.startRevolutions >= configPage4.StgCycles) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) )
   {
-    if( (toothLastToothTime > 0) && (toothLastMinusOneToothTime > 0) && (toothLastToothTime > toothLastMinusOneToothTime) )
+    if( (toothLastMinusOneToothTime > 0) && (toothLastToothTime > toothLastMinusOneToothTime) )
     {
       noInterrupts();
       revolutionTime = (toothLastToothTime - toothLastMinusOneToothTime) * totalTeeth;
@@ -278,6 +250,58 @@ static inline int crankingGetRPM(byte totalTeeth, uint16_t degreesOver)
       tempRPM = (US_IN_MINUTE / revolutionTime);
       if( tempRPM >= MAX_RPM ) { tempRPM = currentStatus.RPM; } //Sanity check. This can prevent spiking caused by noise on individual teeth. The new RPM should never be above 4x the cranking setting value (Remembering that this function is only called is the current RPM is less than the cranking setting)
     }
+  }
+
+  return tempRPM;
+}
+
+/**
+This is a special case of RPM measure that is based on the time between the last 2 teeth rather than the time of the last full revolution.
+This gives much more volatile reading, but is quite useful during cranking, particularly on low resolution patterns.
+It takes an argument of the full (COMPLETE) number of teeth per revolution.
+For a missing tooth wheel, this is the number if the tooth had NOT been missing (Eg 36-1 = 36)
+*/
+//TODO: move staging cycles and sync comparison out of decoder into main speeduino loop
+static inline int crankingGetRPM(uint16_t degreesOver)
+{
+  uint16_t tempRPM = 0;
+  
+  noInterrupts();
+  uint16_t tempTriggerToothAngle = triggerToothAngle;
+  unsigned long tempToothLastToothTime = toothLastToothTime;
+  unsigned long tempToothLastMinusOneToothTime = toothLastMinusOneToothTime;
+  interrupts();
+
+  if ( tempToothLastMinusOneToothTime > 0 && tempToothLastToothTime > tempToothLastMinusOneToothTime && tempTriggerToothAngle > 0 )
+  {
+    uint32_t triggerToothAngleTime = tempToothLastToothTime - tempToothLastMinusOneToothTime;
+    revolutionTime = triggerToothAngleTime * (degreesOver / tempTriggerToothAngle);
+    tempRPM = (US_IN_MINUTE / revolutionTime);
+    if( tempRPM >= MAX_RPM ) { tempRPM = currentStatus.RPM; } //Sanity check. This can prevent spiking caused by noise on individual teeth. The new RPM should never be above 4x the cranking setting value (Remembering that this function is only called is the current RPM is less than the cranking setting)
+  }
+
+  return tempRPM;
+}
+
+/** Compute RPM.
+* As nearly all the decoders use a common method of determining RPM (The time the last full revolution took) A common function is simpler.
+* @param degreesOver - the number of crank degrees between tooth #1s. Some patterns have a tooth #1 every crank rev, others are every cam rev.
+* @return RPM
+*/
+static inline uint16_t stdGetRPM(uint16_t degreesOver)
+{
+  uint16_t tempRPM = 0;
+
+  if ( currentStatus.RPM < currentStatus.crankRPM || toothOneTime == 0 || toothOneMinusOneTime == 0 ) {
+    tempRPM = crankingGetRPM(degreesOver);
+  }
+  else {
+    noInterrupts();
+    revolutionTime = (toothOneTime - toothOneMinusOneTime); //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
+    interrupts();
+    if(degreesOver == 720) { revolutionTime = revolutionTime / 2; }
+    tempRPM = (US_IN_MINUTE / revolutionTime); //Calc RPM based on last full revolution time (Faster as /)
+    if(tempRPM >= MAX_RPM) { tempRPM = currentStatus.RPM; } //Sanity check
   }
 
   return tempRPM;
@@ -566,20 +590,8 @@ void triggerThird_missingTooth()
 uint16_t getRPM_missingTooth()
 {
   uint16_t tempRPM = 0;
-  if( currentStatus.RPM < currentStatus.crankRPM )
-  {
-    if(toothCurrentCount != 1)
-    {
-      if(configPage4.TrigSpeed == CAM_SPEED) { tempRPM = crankingGetRPM(configPage4.triggerTeeth, 720); } //Account for cam speed
-      else { tempRPM = crankingGetRPM(configPage4.triggerTeeth, 360); }
-    }
-    else { tempRPM = currentStatus.RPM; } //Can't do per tooth RPM if we're at tooth #1 as the missing tooth messes the calculation
-  }
-  else
-  {
-    if(configPage4.TrigSpeed == CAM_SPEED) { tempRPM = stdGetRPM(720); } //Account for cam speed
-    else { tempRPM = stdGetRPM(360); }
-  }
+  if(configPage4.TrigSpeed == CAM_SPEED) { tempRPM = stdGetRPM(720); } //Account for cam speed
+  else { tempRPM = stdGetRPM(360); }
   return tempRPM;
 }
 
