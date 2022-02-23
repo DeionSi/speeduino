@@ -11,7 +11,8 @@ void setup()
     // if board doesn't support software reset via Serial.DTR/RTS
     delay(2000);
 
-    UNITY_BEGIN();    // IMPORTANT LINE!
+    //UNITY_BEGIN();    // IMPORTANT LINE!
+    UnityBegin("decodingTests");
 
     //testMissingTooth();
     //testDualWheel();
