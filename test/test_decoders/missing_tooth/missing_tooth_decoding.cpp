@@ -13,7 +13,7 @@ void test0_setup() {
   configPage4.trigPatternSec = SEC_TRIGGER_SINGLE; //TODO: Use different values
   configPage4.PollLevelPolarity = HIGH;
   configPage2.perToothIgn = false; //TODO: Test with this enabled, but the primary function of this tester is not to test new ignition mode
-  configPage4.StgCycles = 1; //TODO: What value to use and test with? //There are calculation issues with high rpm and initial rpm calculation
+  configPage4.StgCycles = 0; //TODO: What value to use and test with? //There are calculation issues with high rpm and initial rpm calculation
   configPage10.vvt2Enabled = 0; //TODO: Enable VVT testing
   currentStatus.crankRPM = 200; //TODO: What value to use and test with?
   configPage4.triggerFilter = 0; //TODO: Test filters
@@ -38,7 +38,13 @@ testParams test0_state1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::RPM, 5000, 2 },
+  { testParams::REVCOUNT, 0 },
+  { testParams::TOOTHANGLECORRECT, 1 },
+  { testParams::TOOTHANGLE_c, 0 },
+  { testParams::LASTTOOTHTIME_c, 0, 4 },
+  { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
+  { testParams::RPM, 5000, 2 }, // This test cannot be more precise because of micros() rounding to every 4th
+  { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
 testParams test0_state2[] = {
@@ -50,7 +56,7 @@ testParams test0_state2[] = {
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::RPM_c_deltaPerThousand, 0, 5 }, // This test cannot be more precise because of micros() rounding to every 4th
+  { testParams::RPM, 5000, 2 }, // This test cannot be more precise because of micros() rounding to every 4th
   { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
