@@ -22,6 +22,8 @@
 #include "init.h"
 #include "test_decoding.h"
 
+// TODO: A new micros function which has better precision than 1 micros
+
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
 
@@ -47,12 +49,13 @@ const char* const testParams::friendlyNames[] = {
   [SYNCLOSSCOUNT] = "Sync-loss count",
   [REVCOUNT] = "Revolution count",
   [TOOTHANGLECORRECT] = "Tooth angle is correct",
-  [TOOTHANGLE] = "Tooth angle",
-  [LASTTOOTHTIME] = "Last tooth time",
-  [LASTTOOTHTIMEMINUSONE] = "Last tooth time minus one",
+  [TOOTHANGLE_c] = "Tooth angle",
+  [LASTTOOTHTIME_c] = "Last tooth time",
+  [LASTTOOTHTIMEMINUSONE_c] = "Last tooth time minus one",
   [RPM] = "RPM",
-  [STALLTIME] = "Stall time",
-  [CRANKANGLE] = "Crank angle",
+  [RPM_c_deltaPerThousand] = "Calculated RPM",
+  [STALLTIME_c] = "Stall time",
+  [CRANKANGLE_c] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
 };
 
@@ -60,10 +63,11 @@ uint32_t testParams::getResult() const {
   uint32_t result = 0;
 
   switch(type) {
-    case CRANKANGLE:
+    case CRANKANGLE_c:
       result = getCrankAngle();
       break;
     case RPM:
+    case RPM_c_deltaPerThousand:
       result = getRPM();
       break;
     case SYNC:
@@ -81,16 +85,16 @@ uint32_t testParams::getResult() const {
     case TOOTHANGLECORRECT:
       result = triggerToothAngleIsCorrect;
       break;
-    case TOOTHANGLE:
+    case TOOTHANGLE_c:
       result = triggerToothAngle;
       break;
-    case LASTTOOTHTIME:
+    case LASTTOOTHTIME_c:
       result = toothLastToothTime;
       break;
-    case LASTTOOTHTIMEMINUSONE:
+    case LASTTOOTHTIMEMINUSONE_c:
       result = toothLastMinusOneToothTime;
       break;
-    case STALLTIME:
+    case STALLTIME_c:
       result = MAX_STALL_TIME;
       break;
     default:
@@ -102,39 +106,47 @@ uint32_t testParams::getResult() const {
 
 void testParams::runTest() {
 
-  uint32_t expected = currentTest->expected;
+  uint32_t expectedCalculated = currentTest->expected;
+  uint16_t deltaCalculated = currentTest->delta;
+
 //TODO: maybe move some static variables out of classes?
   // Calculate our crank angle compare angle based on how much time passed until test
-  if (currentTest->type == CRANKANGLE && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
+  if (currentTest->type == CRANKANGLE_c && decodingTest::testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
     uint32_t delay = currentResult->retrievedAt - lastPRITRIGevent->triggeredAt;
-    expected = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
+    expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / decodingTest::testLastUsPerDegree);
   }
-  else if (currentTest->type == LASTTOOTHTIME) {
-    expected = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
+  else if (currentTest->type == LASTTOOTHTIME_c) {
+    expectedCalculated = currentDecodingTest->testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved
   }
-  else if (currentTest->type == LASTTOOTHTIMEMINUSONE) {
-    expected = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
+  else if (currentTest->type == LASTTOOTHTIMEMINUSONE_c) {
+    expectedCalculated = currentDecodingTest->testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved
   }
-  else if (currentTest->type == TOOTHANGLE) {
-    expected = decodingTest::testLastToothDegrees;
+  else if (currentTest->type == TOOTHANGLE_c) {
+    expectedCalculated = decodingTest::testLastToothDegrees;
   }
-  else if (currentTest->type == STALLTIME && lastPRITRIGevent != nullptr) {
-    expected = lastPRITRIGevent->tooth->degrees * 3333UL;
+  else if (currentTest->type == STALLTIME_c && lastPRITRIGevent != nullptr) {
+    expectedCalculated = lastPRITRIGevent->tooth->degrees * 3333UL; // 3333,33 microseconds per degree at 50 revolutions per minute
+  }
+  else if (currentTest->type == RPM_c_deltaPerThousand && currentDecodingTest->testLastToothMinusOneTime > 0 && currentDecodingTest->testLastToothTime > 0) {
+    uint32_t delay = currentDecodingTest->testLastToothTime - currentDecodingTest->testLastToothMinusOneTime;
+    expectedCalculated = (60000000.0f / delay) / ( 360.0f / lastPRITRIGevent->tooth->degrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
+    //expected = ( 500000.0f * lastPRITRIGevent->tooth->degrees ) / ( delay * 3.0f ); // This converts delay in microseconds and degrees to revolutions per minute
+    deltaCalculated = deltaCalculated * expectedCalculated / 1000;
   }
 
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
     char testMessage[testMessageLength];
-    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", currentResult->value, expected, currentTest->delta);
+    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", currentResult->value, expectedCalculated, deltaCalculated);
     UnityPrint(testMessage);
     for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
   }
 
-  if (currentTest->delta == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(expected, currentResult->value, currentTest->name());
+  if (deltaCalculated == 0) {
+    TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, currentResult->value, currentTest->name());
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(currentTest->delta, expected, currentResult->value, currentTest->name());
+    TEST_ASSERT_INT_WITHIN_MESSAGE(deltaCalculated, expectedCalculated, currentResult->value, currentTest->name());
   }
 }
 

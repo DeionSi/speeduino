@@ -22,12 +22,13 @@ class testParams {
       SYNCLOSSCOUNT,
       REVCOUNT,
       TOOTHANGLECORRECT,
-      TOOTHANGLE,
-      LASTTOOTHTIME,
-      LASTTOOTHTIMEMINUSONE,
+      TOOTHANGLE_c,
+      LASTTOOTHTIME_c,
+      LASTTOOTHTIMEMINUSONE_c,
       RPM,
-      STALLTIME, // TODO: Are there any rules set on stalltime, is it up to each decoder to set?
-      CRANKANGLE,
+      RPM_c_deltaPerThousand,
+      STALLTIME_c,
+      CRANKANGLE_c,
       ENUMEND,
     };
 
@@ -46,12 +47,6 @@ class testParams {
     testParams(const timedTestType, const uint32_t, const uint16_t);
 
 };
-
-//TODO: What are the expected decoder outputs?
-// easy: sync, halfsync, synclosscount, revolutioncount
-// medium: toothLastToothTime, toothLastMinusOneToothTime, rpm, triggerToothAngle, triggerToothAngleIsCorrect
-// hard: crankangle, MAX_STALL_TIME
-
 
 class timedEvent {
   public:
