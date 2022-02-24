@@ -42,7 +42,8 @@ class testParams {
   public:
 
     uint32_t getResult() const;
-    static void runTest();
+    void runTest(testResults* result) const;
+    static void runTestWrapper();
     const char* name() const;
     testParams(const timedTestType, const uint32_t);
     testParams(const timedTestType, const uint32_t, const uint16_t);
@@ -61,7 +62,6 @@ class timedEvent {
     testResults* const results;
 
     void preTestsCommands();
-    static void delayUntil(uint32_t time);
 
   public:
     const timedEventType type;
@@ -69,9 +69,12 @@ class timedEvent {
     const testParams* const tests;
     const testTooth* const tooth = nullptr;
     uint32_t triggeredAt = 0;
+    static testResults* wrapperResult;
+    static const testParams* wrapperTest;
 
-    void trigger();
-    static void runTests();
+    void trigger(uint32_t testStartTime);
+    void runTests(uint32_t testStartTime);
+    static void runTestsWrapper();
 
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results);
@@ -91,13 +94,9 @@ class decodingTest {
     static void resetSpeeduino();
 
   public:
-    static uint32_t startTime;
-    static uint32_t testLastToothTime;
-    static uint32_t testLastToothMinusOneTime;
-    static float testLastUsPerDegree;
-    static uint16_t testLastToothDegrees;
-    static uint32_t testToothOneTime;
-    static uint32_t testRevolutionTime;
+    uint32_t startTime = 0;
+    static timedEvent* wrapperEvent;
+    
     void execute();
     void showTriggerlog();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
