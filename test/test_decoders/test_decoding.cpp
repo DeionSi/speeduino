@@ -1,18 +1,20 @@
 /* Decoder expected outputs
- * currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings)
- * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested
- * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow)
+ * These variables contain the sync status of the decoder.
+ * currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings).
+ * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested.
+ * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow).
  *
- * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync, resets at stall. TODO resets at sync loss??
- * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap
- * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap
- * triggerToothAngle - The angle between the last two teeth. Must always be valid if in sync or half-sync
- * revolutionTime - The time in microseconds for a 360 crank revolution. Must always be valid if in sync or half-sync
+ * These variables/functions must all contain/return valid values if in sync or half-sync.
+ * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync. TODO resets at sync loss??
+ * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap.
+ * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap.
+ * triggerToothAngle - The angle in degrees between the last two teeth.
+ * revolutionTime - The time in microseconds for a 360 crank revolution.
+ * getRPM() - Returns the revolutions per minute
+ * getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
  * 
- * getRPM() - Must always return the rpm if in sync or halfsync
- * getCrankAngle() - Must always return the crankangle if in sync (over 360 or 720 depending on sync) or halfsync (over 360)
- * 
- * triggerToothAngleIsCorrect - Must always be true
+ * --------------
+ * triggerToothAngleIsCorrect - Must always be true, this variable should be removed after the decoders have been updated
  * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
  * 
  * TODO: specify which variable is normally set where
