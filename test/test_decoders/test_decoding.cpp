@@ -31,28 +31,70 @@
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
 
-// Global variables
-
 // Test output variables
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
-// For keeping track of current state //TODO: Only used during result comparison part?
-testResults* timedEvent::wrapperResult;
-const testParams* timedEvent::wrapperTest;
-timedEvent* currentEvent;
-timedEvent* lastPRITRIGevent;
-decodingTest* currentDecodingTest;
+/************ This file is sorted into 3 parts ************
+ * Part 1: Preparation
+ * Part 2: Gathering the results
+ * Part 3: Running the tests (comparing results and giving output)
+ * Part 4: Cleanup / other
+ */
 
-// Used to keep track of variables for calculated fields
-uint32_t testLastToothTime;
-uint32_t testLastToothMinusOneTime;
-float testLastUsPerDegree;
-uint16_t testLastToothDegrees;
-uint32_t testToothOneTime;
-uint32_t testRevolutionTime;
+//************ Part 1: Preparation ************
 
-// testParams
+decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
+
+void decodingTest::execute() {
+
+
+  Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
+  UnityMessage(name, __LINE__);
+
+  if ( verifyEventOrder() ) { // Part 1
+    decodingSetup(); // Part 1
+    gatherResults(); // Part 2
+    compareResults(); // Part 3
+    resetTest(); // Part 4
+  }
+}
+
+bool decodingTest::verifyEventOrder() const {
+  bool result = true;
+  uint32_t lastEventTime = 0;
+  for (int i = 0; i < eventCount; i++) {
+    if (events[i].time < lastEventTime) {
+      snprintf(unityMessage, unityMessageLength, "ERROR: Out of sequence event %lu i %d", events[i].time, i);
+      UnityMessage(unityMessage, __LINE__);
+      result = false;
+    }
+    lastEventTime = events[i].time;
+  }
+  return result;
+}
+
+void decodingTest::decodingSetup() {
+  decoderSetup();
+
+  // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
+  setPinMapping(3);
+
+  // initaliseTriggers attaches interrupts to trigger functions, so: disable, detach and reenable interrupts
+  // Interrupts are needed for micros() function
+  noInterrupts();
+  initialiseTriggers();
+  detachInterrupt( digitalPinToInterrupt(pinTrigger) );
+  detachInterrupt( digitalPinToInterrupt(pinTrigger2) );
+  detachInterrupt( digitalPinToInterrupt(pinTrigger3) );
+  interrupts();
+}
+
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, const testTooth* const a_tooth) :
+testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
+
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
+testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
 
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected) : type(a_type), expected(a_expected) {};
 testParams::testParams(const timedTestType a_type, const uint32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
@@ -73,6 +115,48 @@ const char* const testParams::friendlyNames[] = {
   [CRANKANGLE_c] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
 };
+
+const char* testParams::name() const {
+  return friendlyNames[this->type];
+}
+
+//************ Part 2: Gathering the results ************
+
+void decodingTest::gatherResults() {
+  startTime = micros();
+  for (int i = 0; i < eventCount; i++) {
+    events[i].trigger(startTime);
+  }
+}
+
+void timedEvent::trigger(uint32_t testStartTime) {
+  // Delay until it's time to trigger
+  if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
+    uint32_t delayUntil = time + testStartTime;
+    while(micros() < delayUntil) {};
+  }
+
+  triggeredAt = micros();
+
+  // Execute any actions
+  if (type == PRITRIG) {
+    triggerHandler();
+  }
+
+  // Get data from tests
+  if (tests != nullptr) {
+    preTestsCommands();
+    for (int i = 0; i < testCount; i++) {
+      results[i].retrievedAt = micros();
+      results[i].value = tests[i].getResult();
+    }
+  }
+};
+
+void timedEvent::preTestsCommands() {
+  currentStatus.RPM = getRPM();
+  doCrankSpeedCalcs();
+}
 
 uint32_t testParams::getResult() const {
   uint32_t result = 0;
@@ -122,12 +206,99 @@ uint32_t testParams::getResult() const {
   return result;
 }
 
+//************ Part 3: Running the tests (comparing results and giving output) ************
+
+// For keeping track of current state
+testResults* timedEvent::wrapperResult;
+const testParams* timedEvent::wrapperTest;
+timedEvent* decodingTest::wrapperEvent;
+decodingTest* decodingTest::wrapperDecodingTest;
+
+// Used to keep track of variables for calculated fields
+timedEvent* lastPRITRIGevent;
+uint32_t testLastToothTime;
+uint32_t testLastToothMinusOneTime;
+float testLastUsPerDegree;
+uint16_t testLastToothDegrees;
+uint32_t testToothOneTime;
+uint32_t testRevolutionTime;
+
+void decodingTest::compareResults() {
+  for (int i = 0; i < eventCount; i++) {
+
+    if (events[i].type == timedEvent::PRITRIG) {
+      testLastToothMinusOneTime = testLastToothTime;
+      testLastToothTime = events[i].triggeredAt;
+
+      if (events[i].tooth->angle == 0) {
+        if (testToothOneTime > 0) {
+          testRevolutionTime = events[i].triggeredAt - testToothOneTime;
+        }
+        testToothOneTime = events[i].triggeredAt;
+      }
+
+      if (lastPRITRIGevent != nullptr) {
+        uint32_t interval = events[i].triggeredAt - lastPRITRIGevent->triggeredAt;
+        testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
+
+        testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
+
+      }
+
+      lastPRITRIGevent = &events[i];
+    }
+
+    if (events[i].tests != nullptr) {
+      
+
+      if (individual_test_reports) {
+        events[i].runTests(startTime);
+      }
+      else {
+        wrapperEvent = &events[i];
+        wrapperDecodingTest = this;
+        snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
+        UnityDefaultTestRun(events[i].runTestsWrapper, unityMessage, __LINE__);
+      }
+      
+    }
+    
+  }
+}
+
+// This is needed because Unity tests cannot call non-static member functions or use arguments
+void timedEvent::runTestsWrapper() {
+  decodingTest::wrapperEvent->runTests(decodingTest::wrapperDecodingTest->startTime);
+}
+
+void timedEvent::runTests(uint32_t testStartTime) {
+  if (tests != nullptr) {
+    for (int i = 0; i < testCount; i++) {
+
+      if (individual_test_reports) {
+        wrapperTest = &tests[i];
+        wrapperResult = &results[i];
+        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", time, results[i].retrievedAt - testStartTime, tests[i].name() );
+        UnityDefaultTestRun(tests[i].runTestWrapper, unityMessage, __LINE__);
+      }
+      else {
+        tests[i].runTest(&results[i]);
+      }
+
+    }
+  }
+}
+
+// This is needed because Unity tests cannot call non-static member functions or use arguments
+void testParams::runTestWrapper() {
+  timedEvent::wrapperTest->runTest(timedEvent::wrapperResult);
+}
+
 void testParams::runTest(testResults* result) const {
 
   uint32_t expectedCalculated = expected;
   uint16_t deltaCalculated = delta;
 
-//TODO: maybe move some static variables out of classes?
   // Calculate our crank angle compare angle based on how much time passed until test
   switch(type) {
     case CRANKANGLE_c:
@@ -180,180 +351,40 @@ void testParams::runTest(testResults* result) const {
   }
 }
 
-// This is needed because Unity tests cannot call non-static member functions or use arguments
-void testParams::runTestWrapper() {
-  timedEvent::wrapperTest->runTest(timedEvent::wrapperResult);
-}
+//************ Part 4: Cleanup / other ************
 
-const char* testParams::name() const {
-  return friendlyNames[this->type];
-}
-
-// timedEvent
-
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, const testTooth* const a_tooth) :
-testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
-
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
-testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
-
-void timedEvent::trigger(uint32_t testStartTime) {
-  // Delay until it's time to trigger
-  if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
-    uint32_t delayUntil = time + testStartTime;
-    while(micros() < delayUntil) {};
-  }
-
-  triggeredAt = micros();
-
-  // Execute any actions
-  if (type == PRITRIG) {
-    triggerHandler();
-  }
-
-  // Get data from tests
-  if (tests != nullptr) {
-    preTestsCommands();
-    for (int i = 0; i < testCount; i++) {
-      results[i].retrievedAt = micros();
-      results[i].value = tests[i].getResult();
-    }
-  }
-};
-
-void timedEvent::preTestsCommands() {
-  currentStatus.RPM = getRPM();
-  doCrankSpeedCalcs();
-}
-
-void timedEvent::runTests(uint32_t testStartTime) {
-  if (tests != nullptr) {
-    for (int i = 0; i < testCount; i++) {
-
-      if (individual_test_reports) {
-        wrapperTest = &tests[i];
-        wrapperResult = &results[i];
-        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", time, results[i].retrievedAt - testStartTime, tests[i].name() );
-        UnityDefaultTestRun(tests[i].runTestWrapper, unityMessage, __LINE__);
-      }
-      else {
-        tests[i].runTest(&results[i]);
-      }
-
-    }
-  }
-}
-
-// This is needed because Unity tests cannot call non-static member functions or use arguments
-void timedEvent::runTestsWrapper() {
-  currentEvent->runTests(currentDecodingTest->startTime);
-}
-
-// decodingTest
-
-decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
-
-void decodingTest::execute() {
-  // Reset globals for subsequent tests
+void decodingTest::resetTest() {
+  // Resets the testing global variables
   testLastToothTime = 0;
   testLastToothMinusOneTime = 0;
   testLastUsPerDegree = 0;
   testLastToothDegrees = 0;
   testToothOneTime = 0;
   testRevolutionTime = 0;
-  
-  currentEvent = nullptr;
   lastPRITRIGevent = nullptr;
-  currentDecodingTest = this;
 
-  Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
-  UnityMessage(name, __LINE__);
-
-  if ( verifyEventOrder() ) {
-    decodingSetup();
-    gatherResults();
-    compareResults();
-    resetSpeeduino();
-  }
+  stallCleanup(); // Resets Speeduinos decoder variables
 }
 
-bool decodingTest::verifyEventOrder() const {
-  bool result = true;
-  uint32_t lastEventTime = 0;
-  for (int i; i < eventCount; i++) {
-    if (events[i].time < lastEventTime) {
-      snprintf(unityMessage, unityMessageLength, "ERROR: Out of sequence event %lu", events[i].time);
-      UnityMessage(unityMessage, __LINE__);
-      result = false;
-    }
-    lastEventTime = events[i].time;
-  }
-  return result;
-}
+void decodingTest::stallCleanup() {
+  //TODO: Use a function in speeduino to do all of this
 
-void decodingTest::decodingSetup() {
-  decoderSetup();
+  //This is from Speeduinos main loop which checks for engine stall/turn off and resets a bunch decoder related values
+  currentStatus.RPM = 0;
+  toothLastToothTime = 0;
+  toothLastSecToothTime = 0;
+  currentStatus.hasSync = false;
+  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+  currentStatus.startRevolutions = 0;
+  toothSystemCount = 0;
+  secondaryToothCount = 0;
 
-  // Set pins because we need the trigger pin numbers, BoardID 3 (Speeduino v0.4 board) appears to have pin mappings for most variants
-  setPinMapping(3);
-
-  // initaliseTriggers attaches interrupts to trigger functions, so: disable, detach and reenable interrupts
-  // Interrupts are needed for micros() function
-  noInterrupts();
-  initialiseTriggers();
-  detachInterrupt( digitalPinToInterrupt(pinTrigger) );
-  detachInterrupt( digitalPinToInterrupt(pinTrigger2) );
-  detachInterrupt( digitalPinToInterrupt(pinTrigger3) );
-  interrupts();
-}
-
-void decodingTest::gatherResults() {
-  startTime = micros();
-  for (int i = 0; i < eventCount; i++) {
-    events[i].trigger(startTime);
-  }
-}
-
-void decodingTest::compareResults() {
-  for (int i = 0; i < eventCount; i++) {
-
-    if (events[i].type == timedEvent::PRITRIG) {
-      testLastToothMinusOneTime = testLastToothTime;
-      testLastToothTime = events[i].triggeredAt;
-
-      if (events[i].tooth->angle == 0) {
-        if (testToothOneTime > 0) {
-          testRevolutionTime = events[i].triggeredAt - testToothOneTime;
-        }
-        testToothOneTime = events[i].triggeredAt;
-      }
-
-      if (lastPRITRIGevent != nullptr) {
-        uint32_t interval = events[i].triggeredAt - lastPRITRIGevent->triggeredAt;
-        testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
-
-        testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
-
-      }
-
-      lastPRITRIGevent = &events[i];
-    }
-
-    if (events[i].tests != nullptr) {
-      
-      currentEvent = &events[i];
-
-      if (individual_test_reports) {
-        events[i].runTests(startTime);
-      }
-      else {
-        snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", events[i].time, events[i].triggeredAt - startTime);
-        UnityDefaultTestRun(events[i].runTestsWrapper, unityMessage, __LINE__);
-      }
-      
-    }
-    
-  }
+  //TODO: These should be added to Speeduinos code
+  /*toothLastMinusOneToothTime = 0;
+  triggerToothAngle = 0;
+  triggerToothAngleIsCorrect = false;
+  revolutionTime = 0;
+  MAX_STALL_TIME = 0;*/
 }
 
 void decodingTest::showTriggerlog() {
@@ -367,17 +398,4 @@ void decodingTest::showTriggerlog() {
     UnityPrint(unityMessage);
     UNITY_PRINT_EOL();
   }
-}
-
-void decodingTest::resetSpeeduino() {
-  //This is from Speeduinos main loop which checks for engine stall/turn off and resets a bunch decoder related values
-  //TODO: Use a function in speeduino to do this
-  currentStatus.RPM = 0;
-  toothLastToothTime = 0;
-  toothLastSecToothTime = 0;
-  currentStatus.hasSync = false;
-  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-  currentStatus.startRevolutions = 0;
-  toothSystemCount = 0;
-  secondaryToothCount = 0;
 }
