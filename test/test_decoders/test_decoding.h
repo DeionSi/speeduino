@@ -91,11 +91,13 @@ class decodingTest {
     bool verifyEventOrder() const;
     void decodingSetup();
     void compareResults();
-    static void resetSpeeduino();
+    static void resetTest();
+    static void stallCleanup();
 
   public:
     uint32_t startTime = 0;
     static timedEvent* wrapperEvent;
+    static decodingTest* wrapperDecodingTest;
     
     void execute();
     void showTriggerlog();

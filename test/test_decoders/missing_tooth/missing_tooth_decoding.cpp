@@ -61,7 +61,7 @@ testParams test0_state2[] = {
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 1 },
-  { testParams::REVTIME_c, 52 },
+  { testParams::REVTIME_c, 0, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
