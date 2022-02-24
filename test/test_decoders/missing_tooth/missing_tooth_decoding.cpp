@@ -45,7 +45,7 @@ testParams test0_state1[] = {
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 0 },
-  { testParams::REVTIME_c, 0, 50 },
+  { testParams::REVTIME_c, 0, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
@@ -54,12 +54,14 @@ testParams test0_state1[] = {
   { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
+// TODO: calculate revcount
+// TODO: reset test global variables when losing sync
 testParams test0_state2[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
   { testParams::REVCOUNT, 1 },
-  { testParams::REVTIME_c, 50 },
+  { testParams::REVTIME_c, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
