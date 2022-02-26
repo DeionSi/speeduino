@@ -229,6 +229,7 @@ static inline void setFilter(unsigned long curGap)
   else { triggerFilterTime = 0; } //trigger filter is turned off.
 }
 
+//TODO: move staging cycles and sync comparison out of decoder into main speeduino loop
 /**
 This is a special case of RPM measure that is based on the time between the last 2 teeth rather than the time of the last full revolution.
 This gives much more volatile reading, but is quite useful during cranking, particularly on low resolution patterns.
@@ -259,9 +260,7 @@ static inline int crankingGetRPM(byte totalTeeth, uint16_t degreesOver)
 This is a special case of RPM measure that is based on the time between the last 2 teeth rather than the time of the last full revolution.
 This gives much more volatile reading, but is quite useful during cranking, particularly on low resolution patterns.
 It takes an argument of the full (COMPLETE) number of teeth per revolution.
-For a missing tooth wheel, this is the number if the tooth had NOT been missing (Eg 36-1 = 36)
 */
-//TODO: move staging cycles and sync comparison out of decoder into main speeduino loop
 static inline int crankingGetRPM(uint16_t degreesOver)
 {
   uint16_t tempRPM = 0;

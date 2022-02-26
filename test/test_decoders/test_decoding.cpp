@@ -18,7 +18,6 @@
  * triggerToothAngleIsCorrect - Must always be true, this variable should be removed after the decoders have been updated
  * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
  * 
- * TODO: specify which variable is normally set where
  */
 
 #include "arduino.h"
@@ -28,6 +27,7 @@
 #include "init.h"
 #include "test_decoding.h"
 
+// Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
 
@@ -35,7 +35,7 @@ const bool individual_test_reports_debug = true; // Shows delta/expected/result 
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
-/************ This file is sorted into 3 parts ************
+/************ This file is separated into parts ************
  * Part 1: Preparation
  * Part 2: Gathering the results
  * Part 3: Running the tests (comparing results and giving output)
@@ -103,7 +103,7 @@ const char* const testParams::friendlyNames[] = {
   [SYNC] = "Sync",
   [HALFSYNC] = "Half-sync",
   [SYNCLOSSCOUNT] = "Sync-loss count",
-  [REVCOUNT] = "Revolution count",
+  [REVCOUNT_c] = "Revolution count",
   [REVTIME_c] = "Revolution time",
   [TOOTHANGLECORRECT] = "Tooth angle is correct",
   [TOOTHANGLE_c] = "Tooth angle",
@@ -178,7 +178,7 @@ uint32_t testParams::getResult() const {
     case SYNCLOSSCOUNT:
       result = currentStatus.syncLossCounter;
       break;
-    case REVCOUNT:
+    case REVCOUNT_c:
       result = currentStatus.startRevolutions;
       break;
     case REVTIME_c:
@@ -220,29 +220,46 @@ uint32_t testLastToothTime;
 uint32_t testLastToothMinusOneTime;
 float testLastUsPerDegree;
 uint16_t testLastToothDegrees;
+uint16_t testLastRPM;
 uint32_t testToothOneTime;
+uint32_t testToothOneMinusOneTime;
 uint32_t testRevolutionTime;
+byte testRevolutionCount;
 
 void decodingTest::compareResults() {
   for (int i = 0; i < eventCount; i++) {
 
     if (events[i].type == timedEvent::PRITRIG) {
+      
+      // Calculate expected tooth times, tooth one times and revolution count
+      if (events[i].tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
+        testToothOneMinusOneTime = testToothOneTime;
+        testToothOneTime = events[i].triggeredAt;
+
+        if (testToothOneMinusOneTime > 0) {
+          testRevolutionCount++;
+        }
+      }
+      
       testLastToothMinusOneTime = testLastToothTime;
       testLastToothTime = events[i].triggeredAt;
-
-      if (events[i].tooth->angle == 0) {
-        if (testToothOneTime > 0) {
-          testRevolutionTime = events[i].triggeredAt - testToothOneTime;
-        }
-        testToothOneTime = events[i].triggeredAt;
+      
+      // Calculate expected revolution time and RPM
+      if (testToothOneMinusOneTime > 0 && testLastRPM > currentStatus.crankRPM) {
+        testRevolutionTime = testToothOneTime - testToothOneMinusOneTime;
       }
+      else if (lastPRITRIGevent != nullptr && testLastToothMinusOneTime > 0) {
+        uint32_t testTriggerToothAngleTime = testLastToothTime - testLastToothMinusOneTime;
+        testRevolutionTime = testTriggerToothAngleTime * (CRANK_ANGLE_MAX / lastPRITRIGevent->tooth->degrees);
+      }
+      testLastRPM = 60000000 / testRevolutionTime;
 
+      // Calculate expected micros per degree and last tooth degrees
       if (lastPRITRIGevent != nullptr) {
         uint32_t interval = events[i].triggeredAt - lastPRITRIGevent->triggeredAt;
         testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
 
         testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
-
       }
 
       lastPRITRIGevent = &events[i];
@@ -316,6 +333,9 @@ void testParams::runTest(testResults* result) const {
     case REVTIME_c:
       expectedCalculated = testRevolutionTime;
       break;
+    case REVCOUNT_c:
+      expectedCalculated = testRevolutionCount;
+      break;
     case TOOTHANGLE_c:
       expectedCalculated = testLastToothDegrees;
       break;
@@ -325,11 +345,7 @@ void testParams::runTest(testResults* result) const {
       }
       break;
     case RPM_c_deltaPerThousand:
-      if (testLastToothMinusOneTime > 0 && testLastToothTime > 0) {
-        uint32_t delay = testLastToothTime - testLastToothMinusOneTime;
-        expectedCalculated = (60000000.0f / delay) / ( 360.0f / testLastToothDegrees ); // This converts delay in microseconds and degrees of rotation to revolutions per minute
-        deltaCalculated = deltaCalculated * expectedCalculated / 1000;
-      }
+      expectedCalculated = testLastRPM;
       break;
     default:
       break;
@@ -359,8 +375,11 @@ void decodingTest::resetTest() {
   testLastToothMinusOneTime = 0;
   testLastUsPerDegree = 0;
   testLastToothDegrees = 0;
+  testLastRPM = 0;
   testToothOneTime = 0;
+  testToothOneMinusOneTime = 0;
   testRevolutionTime = 0;
+  testRevolutionCount = 0;
   lastPRITRIGevent = nullptr;
 
   stallCleanup(); // Resets Speeduinos decoder variables

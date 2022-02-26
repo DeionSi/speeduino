@@ -20,7 +20,7 @@ class testParams {
       SYNC,
       HALFSYNC,
       SYNCLOSSCOUNT,
-      REVCOUNT,
+      REVCOUNT_c,
       REVTIME_c,
       TOOTHANGLECORRECT,
       TOOTHANGLE_c,
