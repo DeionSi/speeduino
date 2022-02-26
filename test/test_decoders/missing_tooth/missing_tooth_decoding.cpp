@@ -41,6 +41,7 @@ testParams test0_unsynced0[] = {
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
 };
+// TODO: Separate calculated tests for shared usage
 testParams test0_state1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
@@ -55,7 +56,6 @@ testParams test0_state1[] = {
   { testParams::STALLTIME_c, 0 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
-// TODO: calculate revcount
 // TODO: reset test global variables when losing sync
 testParams test0_state2[] = {
   { testParams::SYNC, 1 },
