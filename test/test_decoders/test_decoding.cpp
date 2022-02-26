@@ -16,7 +16,7 @@
  * 
  * --------------
  * triggerToothAngleIsCorrect - Must always be true, this variable should be removed after the decoders have been updated
- * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino, not as part of decoder
+ * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino from triggerToothAngle, not as part of decoder
  * 
  */
 
