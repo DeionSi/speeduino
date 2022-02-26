@@ -5,8 +5,8 @@
 #include "../test_decoding.h"
 
 /* Instructions:
- * Don't start tests on tooth one (unless there is only one tooth ofcourse)
- * Tooth one is identified by 0 angle
+ * Don't start tests on tooth one (unless there is only one tooth)
+ * Tooth one is identified by angle 0
  * 
  */
 
@@ -35,6 +35,7 @@ void test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
+// TODO: test deltas
 testParams test0_unsynced0[] = {
   { testParams::SYNC, 0 },
   { testParams::HALFSYNC, 0 },
@@ -44,7 +45,7 @@ testParams test0_state1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::REVCOUNT, 0 },
+  { testParams::REVCOUNT_c, 0 },
   { testParams::REVTIME_c, 0, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
@@ -60,7 +61,7 @@ testParams test0_state2[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::REVCOUNT, 1 },
+  { testParams::REVCOUNT_c, 0 },
   { testParams::REVTIME_c, 0, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
