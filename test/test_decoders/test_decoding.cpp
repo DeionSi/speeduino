@@ -14,9 +14,10 @@
  * getRPM() - Returns the revolutions per minute
  * getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
  * 
+ * These variable are set and forget
+ * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. //TODO: This should only be used before sync is achieved, correct stall time can be calculated after stall //TODO: should stall rpm be configurable? calculate in speeduino from triggerToothAngle
  * --------------
  * triggerToothAngleIsCorrect - Must always be true, this variable should be removed after the decoders have been updated
- * MAX_STALL_TIME - Must always be correct if in sync. Should be set so an actual RPM of less than 50 causes stall. //TODO: actual rpm for stall, maybe should be configurable? calculate in speeduino from triggerToothAngle, not as part of decoder
  * 
  */
 
@@ -111,7 +112,7 @@ const char* const testParams::friendlyNames[] = {
   [LASTTOOTHTIMEMINUSONE_c] = "Last tooth time minus one",
   [RPM] = "RPM",
   [RPM_c_deltaPerThousand] = "Calculated RPM",
-  [STALLTIME_c] = "Stall time",
+  [MAXSTALLTIME] = "Max Stall time",
   [CRANKANGLE_c] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
 };
@@ -196,7 +197,7 @@ uint32_t testParams::getResult() const {
     case LASTTOOTHTIMEMINUSONE_c:
       result = toothLastMinusOneToothTime;
       break;
-    case STALLTIME_c:
+    case MAXSTALLTIME:
       result = MAX_STALL_TIME;
       break;
     default:
@@ -338,11 +339,6 @@ void testParams::runTest(testResults* result) const {
       break;
     case TOOTHANGLE_c:
       expectedCalculated = testLastToothDegrees;
-      break;
-    case STALLTIME_c:
-      if (lastPRITRIGevent != nullptr) {
-        expectedCalculated = lastPRITRIGevent->tooth->degrees * 3333UL; // 3333,33 microseconds per degree at 50 revolutions per minute
-      }
       break;
     case RPM_c_deltaPerThousand:
       expectedCalculated = testLastRPM;
