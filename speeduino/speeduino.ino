@@ -185,7 +185,7 @@ void loop()
 
     currentLoopTime = micros_safe();
 
-    // Calculate stall time based on current tooth gap length //Untested
+    // Calculate stall time based on current tooth gap length //TODO: Untested
     uint32_t STALL_TIME = 0;
     noInterrupts();
     if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
@@ -209,21 +209,13 @@ void loop()
     }
     else
     {
-      //We reach here if the time between teeth is too great. This VERY likely means the engine has stopped
+      //We reach here if the time between teeth is too great. This VERY likely means the engine has stoppe
       currentStatus.RPM = 0;
       currentStatus.RPMdiv100 = 0;
       currentStatus.PW1 = 0;
       currentStatus.VE = 0;
       currentStatus.VE2 = 0;
-      toothLastToothTime = 0;
-      toothLastSecToothTime = 0;
-      //toothLastMinusOneToothTime = 0;
-      currentStatus.hasSync = false;
-      BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
       currentStatus.runSecs = 0; //Reset the counter for number of seconds running.
-      currentStatus.startRevolutions = 0;
-      toothSystemCount = 0;
-      secondaryToothCount = 0;
       MAPcurRev = 0;
       MAPcount = 0;
       currentStatus.rpmDOT = 0;
@@ -241,6 +233,7 @@ void loop()
       //This is a safety check. If for some reason the interrupts have got screwed up (Leading to 0rpm), this resets them.
       //It can possibly be run much less frequently.
       //This should only be run if the high speed logger are off because it will change the trigger interrupts back to defaults rather than the logger versions
+      resetDecoderState();
       if( (currentStatus.toothLogEnabled == false) && (currentStatus.compositeLogEnabled == false) ) { initialiseTriggers(); }
 
       VVT1_PIN_LOW();

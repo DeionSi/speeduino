@@ -5,7 +5,6 @@
 #include "../test_decoding.h"
 
 /* Instructions:
- * Don't start tests on tooth one (unless there is only one tooth)
  * Tooth one is identified by angle 0
  * 
  */
@@ -53,7 +52,7 @@ testParams test0_sync1[] = {
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::RPM, 5000, 20 }, // This test cannot be more precise because of micros() rounding to every 4th
+  { testParams::RPM, 5000, 20 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
 // TODO: reset test global variables when losing sync

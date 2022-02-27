@@ -5,20 +5,40 @@
  * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested.
  * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow).
  *
- * These variables/functions must all contain/return valid values if in sync or half-sync. If losing all sync these should all be reset.
- * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync. TODO resets at sync loss??
- * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap.
- * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. TODO resets at sync loss?? TODO should be replaced by lastGap.
+ * These variables/functions must all contain/return valid values if in sync or half-sync.
+ * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync.
+ * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger.
+ * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. //TODO should be replaced by lastGap.
  * triggerToothAngle - The angle in degrees between the last two teeth.
+ * triggerToothAngleIsCorrect - Must always be true //TODO: this variable should be removed after the decoders have been updated
  * revolutionTime - The time in microseconds for a 360 crank revolution.
  * getRPM() - Returns the revolutions per minute
  * getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
  * 
  * These variable are set and forget
- * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. //TODO: This should only be used before sync is achieved, correct stall time can be calculated after stall //TODO: should stall rpm be configurable? calculate in speeduino from triggerToothAngle
- * --------------
- * triggerToothAngleIsCorrect - Must always be true, this variable should be removed after the decoders have been updated
+ * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. //TODO: This should only be used before sync is achieved, correct stall time can be calculated after sync //TODO: should stall rpm be configurable? calculate in speeduino from triggerToothAngle
  * 
+ *                                                        Resets at stall/syncloss
+ * currentStatus.hasSync                                  y
+ * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) y
+ * currentStatus.syncLossCounter                          n
+ * currentStatus.startRevolutions                         y (y? for syncloss) //TODO figure out questionmark
+ * toothLastToothTime                                     y (n for syncloss)
+ * toothLastMinusOneToothTime                             y
+ * triggerToothAngle                                      y
+ * revolutionTime                                         y
+ * getRPM()                                               -
+ * getCrankAngle()                                        -
+ * MAX_STALL_TIME                                         n/a
+ * triggerToothAngleIsCorrect                             y
+ * 
+ */
+
+/************ This file is separated into parts ************
+ * Part 1: Preparation
+ * Part 2: Gathering the results
+ * Part 3: Running the tests (comparing results and giving output)
+ * Part 4: Cleanup / other
  */
 
 #include "arduino.h"
@@ -35,13 +55,6 @@ const bool individual_test_reports_debug = true; // Shows delta/expected/result 
 // Test output variables
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
-
-/************ This file is separated into parts ************
- * Part 1: Preparation
- * Part 2: Gathering the results
- * Part 3: Running the tests (comparing results and giving output)
- * Part 4: Cleanup / other
- */
 
 //************ Part 1: Preparation ************
 
@@ -382,24 +395,10 @@ void decodingTest::resetTest() {
 }
 
 void decodingTest::stallCleanup() {
-  //TODO: Use a function in speeduino to do all of this
-
-  //This is from Speeduinos main loop which checks for engine stall/turn off and resets a bunch decoder related values
+  //This is from Speeduinos main loop which checks for engine stall/turn off
+  resetDecoderState();
+  
   currentStatus.RPM = 0;
-  toothLastToothTime = 0;
-  toothLastSecToothTime = 0;
-  currentStatus.hasSync = false;
-  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-  currentStatus.startRevolutions = 0;
-  toothSystemCount = 0;
-  secondaryToothCount = 0;
-
-  //TODO: These should be added to Speeduinos code
-  /*toothLastMinusOneToothTime = 0;
-  triggerToothAngle = 0;
-  triggerToothAngleIsCorrect = false;
-  revolutionTime = 0;
-  MAX_STALL_TIME = 0;*/
 }
 
 void decodingTest::showTriggerlog() {
