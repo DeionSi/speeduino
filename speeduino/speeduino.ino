@@ -184,8 +184,22 @@ void loop()
     // if (configPage2.displayType && (mainLoopCount & 255) == 1) { updateDisplay();}
 
     currentLoopTime = micros_safe();
+
+    // Calculate stall time based on current tooth gap length //Untested
+    uint32_t STALL_TIME = 0;
+    noInterrupts();
+    if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
+      unsigned long tempTriggerToothAngle = triggerToothAngle;
+      interrupts();
+      STALL_TIME = tempTriggerToothAngle * 3333UL; // There are 3333 microseconds per degree at 50,005 revolutions per minute
+    }
+    else {
+      interrupts();
+      STALL_TIME = MAX_STALL_TIME;
+    }
+
     unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
-    if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
+    if ( (timeToLastTooth < STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the lastest time and doing the comparison
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;

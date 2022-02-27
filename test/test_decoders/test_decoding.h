@@ -28,7 +28,7 @@ class testParams {
       LASTTOOTHTIMEMINUSONE_c,
       RPM,
       RPM_c_deltaPerThousand,
-      STALLTIME_c,
+      MAXSTALLTIME,
       CRANKANGLE_c,
       ENUMEND,
     };
