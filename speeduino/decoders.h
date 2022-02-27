@@ -42,6 +42,8 @@
 void loggerPrimaryISR();
 void loggerSecondaryISR();
 
+extern void resetDecoderState();
+
 //All of the below are the 6 required functions for each decoder / pattern
 void triggerSetup_missingTooth();
 void triggerPri_missingTooth();
