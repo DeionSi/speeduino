@@ -307,9 +307,52 @@ static inline uint16_t stdGetRPM(uint16_t degreesOver)
 }
 
 /**
+ * Gets the correct stall time depending on decoder state
+ * Stalling is determined by looking at how long ago the last tooth was seen.
+ * The delay varies between decoders and changes from tooth to tooth.
+ */
+uint32_t getStallTime() { //TODO: Untested
+  // Calculate stall time based on current tooth gap length 
+
+  uint32_t stallTime;
+  noInterrupts();
+  if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
+    unsigned long tempTriggerToothAngle = triggerToothAngle;
+    interrupts();
+    stallTime = tempTriggerToothAngle * 3333UL; // There are 3333 microseconds per degree at 50,005 revolutions per minute
+  }
+  else {
+    interrupts();
+    stallTime = MAX_STALL_TIME;
+  }
+
+  return stallTime;
+}
+
+/**
+ * Returns true if the decoder has stalled. Returns false if the decoder has not stalled.
+ * Stalling is determined by looking at how long ago the last tooth was seen.
+ * The delay varies between decoders and changes from tooth to tooth.
+ * This function must always be called with interrupts disabled
+ */
+bool isDecoderStalled(uint32_t stallTime) { //TODO: Untested
+  bool decoderStalled;
+
+  uint32_t timeToLastTooth = (micros_safe() - toothLastToothTime);
+  if ( timeToLastTooth > stallTime ) {
+    decoderStalled = true;
+  }
+  else {
+    decoderStalled = false;
+  }
+
+  return decoderStalled;
+}
+
+/**
  * Resets most decoder variables
  */
-extern void resetDecoderState() {
+void resetDecoderState() {
   //Decoder output variables
   toothLastToothTime = 0;
   toothLastMinusOneToothTime = 0;
@@ -322,13 +365,11 @@ extern void resetDecoderState() {
   MAX_STALL_TIME = 500000UL; // Default 0,5 seconds value
 
   //Common decoder shared variables
-  toothLastToothTime = 0;
+  toothOneTime = 0;
+  toothOneMinusOneTime = 0;
   toothLastSecToothTime = 0;
-  toothLastMinusOneToothTime = 0;
   toothSystemCount = 0;
   secondaryToothCount = 0;
-
-  //TODO: what about other variables set by getCrankAngle?
 }
 
 /**

@@ -182,25 +182,12 @@ void loop()
           
     //Displays currently disabled
     // if (configPage2.displayType && (mainLoopCount & 255) == 1) { updateDisplay();}
+    uint32_t STALL_TIME = getStallTime();
 
-    currentLoopTime = micros_safe();
-
-    // Calculate stall time based on current tooth gap length //TODO: Untested
-    uint32_t STALL_TIME = 0;
-    noInterrupts();
-    if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
-      unsigned long tempTriggerToothAngle = triggerToothAngle;
-      interrupts();
-      STALL_TIME = tempTriggerToothAngle * 3333UL; // There are 3333 microseconds per degree at 50,005 revolutions per minute
-    }
-    else {
-      interrupts();
-      STALL_TIME = MAX_STALL_TIME;
-    }
-
-    unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
-    if ( (timeToLastTooth < STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the lastest time and doing the comparison
-    {
+    noInterrupts(); // This makes sure we can reset everything before any other interrupts fire. It's also required for the isDecoderStalled function.
+    if ( isDecoderStalled(STALL_TIME) == false )
+    { //Engine is not stalled so continue as normal
+      interrupts(); 
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
       currentStatus.RPMdiv100 = div100(currentStatus.RPM);
@@ -208,7 +195,7 @@ void loop()
       currentStatus.fuelPumpOn = true; //Not sure if this is needed.
     }
     else
-    {
+    { //Engine is stalled so reset "everything"
       //We reach here if the time between teeth is too great. This VERY likely means the engine has stoppe
       currentStatus.RPM = 0;
       currentStatus.RPMdiv100 = 0;
@@ -230,10 +217,10 @@ void loop()
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_RUN); //Same as above except for RUNNING status
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_ASE); //Same as above except for ASE status
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_ACC); //Same as above but the accel enrich (If using MAP accel enrich a stall will cause this to trigger)
+      resetDecoderState(); // Resets a lot of variables of the decoder (which is also reinitialised with initialiseTriggers below)
       //This is a safety check. If for some reason the interrupts have got screwed up (Leading to 0rpm), this resets them.
       //It can possibly be run much less frequently.
       //This should only be run if the high speed logger are off because it will change the trigger interrupts back to defaults rather than the logger versions
-      resetDecoderState();
       if( (currentStatus.toothLogEnabled == false) && (currentStatus.compositeLogEnabled == false) ) { initialiseTriggers(); }
 
       VVT1_PIN_LOW();
@@ -241,6 +228,8 @@ void loop()
       DISABLE_VVT_TIMER();
       boostDisable();
       if(configPage4.ignBypassEnabled > 0) { digitalWrite(pinIgnBypass, LOW); } //Reset the ignition bypass ready for next crank attempt
+
+      interrupts();
     }
 
     //***Perform sensor reads***
