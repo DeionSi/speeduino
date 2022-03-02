@@ -71,6 +71,7 @@ void decodingTest::execute() {
     gatherResults(); // Part 2
     compareResults(); // Part 3
     resetTest(); // Part 4
+    stallCleanup(); // Reset speeduino
   }
 }
 
@@ -136,9 +137,12 @@ const char* testParams::name() const {
 
 //************ Part 2: Gathering the results ************
 
+decodingTest* currentDecodingTest; //TODO: make it better or not needed
+
 void decodingTest::gatherResults() {
   startTime = micros();
   for (int i = 0; i < eventCount; i++) {
+    currentDecodingTest = this;
     events[i].trigger(startTime);
   }
 }
@@ -153,8 +157,19 @@ void timedEvent::trigger(uint32_t testStartTime) {
   triggeredAt = micros();
 
   // Execute any actions
-  if (type == PRITRIG) {
-    triggerHandler();
+  switch(type) {
+    case PRITRIG:
+      triggerHandler();
+      break;
+
+    case STALL:
+      decodingTest::stallCleanup();
+      break;
+
+    case TEST:
+    default:
+      break; // do nothing special
+    
   }
 
   // Get data from tests
@@ -165,7 +180,7 @@ void timedEvent::trigger(uint32_t testStartTime) {
       results[i].value = tests[i].getResult();
     }
   }
-};
+}
 
 void timedEvent::preTestsCommands() {
   currentStatus.RPM = getRPM();
@@ -244,7 +259,7 @@ void decodingTest::compareResults() {
   for (int i = 0; i < eventCount; i++) {
 
     if (events[i].type == timedEvent::PRITRIG) {
-      
+      //TODO: move this code into timedevent
       // Calculate expected tooth times, tooth one times and revolution count
       if (events[i].tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
         testToothOneMinusOneTime = testToothOneTime;
@@ -277,6 +292,9 @@ void decodingTest::compareResults() {
       }
 
       lastPRITRIGevent = &events[i];
+    }
+    else if (events[i].type == timedEvent::STALL) {
+      resetTest();
     }
 
     if (events[i].tests != nullptr) {
@@ -390,15 +408,12 @@ void decodingTest::resetTest() {
   testRevolutionTime = 0;
   testRevolutionCount = 0;
   lastPRITRIGevent = nullptr;
-
-  stallCleanup(); // Resets Speeduinos decoder variables
 }
 
 void decodingTest::stallCleanup() {
-  //This is from Speeduinos main loop which checks for engine stall/turn off
   resetDecoderState();
-  
-  currentStatus.RPM = 0;
+  currentStatus.RPM = 0; // Extra variable which is not owned by the decoder but is used by the decoder // TODO: Make the decoder own this variable?
+  currentDecodingTest->decodingSetup();
 }
 
 void decodingTest::showTriggerlog() {
