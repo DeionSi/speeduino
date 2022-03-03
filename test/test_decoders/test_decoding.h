@@ -55,6 +55,7 @@ class timedEvent {
     enum timedEventType {
       PRITRIG,
       TEST,
+      STALL, // The testing code needs to be told that it should stall
     };
 
   private:
@@ -92,7 +93,6 @@ class decodingTest {
     void decodingSetup();
     void compareResults();
     static void resetTest();
-    static void stallCleanup();
 
   public:
     uint32_t startTime = 0;
@@ -101,6 +101,7 @@ class decodingTest {
     
     void execute();
     void showTriggerlog();
+    static void stallCleanup();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
