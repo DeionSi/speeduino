@@ -46,13 +46,13 @@ testParams test0_sync1[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
+  { testParams::RPM, 5000, 20 },
   { testParams::REVCOUNT_c, 0 },
   { testParams::REVTIME_c, 0, 52 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::RPM, 5000, 20 },
   { testParams::CRANKANGLE_c, 0, 1 },
 };
 // TODO: reset test global variables when losing sync
@@ -109,6 +109,16 @@ timedEvent test0_events[] {
   { timedEvent::PRITRIG, 34000, timedEventArrayTestEntry(test0_sync1), &mt_t10 },
   { timedEvent::PRITRIG, 35000, timedEventArrayTestEntry(test0_sync1), &mt_t11 },
   { timedEvent::PRITRIG, 37000, timedEventArrayTestEntry(test0_sync1), &mt_t1 },
+  { timedEvent::STALL,   150000, timedEventArrayTestEntry(test0_unsynced0) },
+  { timedEvent::PRITRIG, 151000, timedEventArrayTestEntry(test0_unsynced0), &mt_t9 },
+  { timedEvent::PRITRIG, 152000, timedEventArrayTestEntry(test0_unsynced0), &mt_t10 },
+  { timedEvent::PRITRIG, 153000, timedEventArrayTestEntry(test0_unsynced0), &mt_t11 },
+  { timedEvent::PRITRIG, 155000, timedEventArrayTestEntry(test0_sync1), &mt_t1 },
+  { timedEvent::PRITRIG, 156000, timedEventArrayTestEntry(test0_sync1), &mt_t2 },
+  { timedEvent::PRITRIG, 157000, timedEventArrayTestEntry(test0_sync1), &mt_t3 },
+  { timedEvent::PRITRIG, 158000, timedEventArrayTestEntry(test0_sync1), &mt_t4 },
+  { timedEvent::PRITRIG, 159000, timedEventArrayTestEntry(test0_sync1), &mt_t5 },
+  { timedEvent::PRITRIG, 160000, timedEventArrayTestEntry(test0_sync1), &mt_t6 },
 };
 
 decodingTest decodingTests[] = {
