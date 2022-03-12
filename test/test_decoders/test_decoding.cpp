@@ -14,9 +14,11 @@
  * revolutionTime - The time in microseconds for a 360 crank revolution.
  * getRPM() - Returns the revolutions per minute
  * getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
+ * getStallTime() - Returns the number of microseconds from the current tooth to the next at 50 rpm.
+ * isDecoderStalled() - Returns true if the decoder determines RPM is below 50 (by using the output from getStallTime()).
  * 
  * These variable are set and forget
- * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. //TODO: This should only be used before sync is achieved, correct stall time can be calculated after sync //TODO: should stall rpm be configurable? calculate in speeduino from triggerToothAngle
+ * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. Is only used internally by the decoder until sync is gained.
  * 
  *                                                        Resets at stall/syncloss
  * currentStatus.hasSync                                  y
@@ -27,8 +29,6 @@
  * toothLastMinusOneToothTime                             y
  * triggerToothAngle                                      y
  * revolutionTime                                         y
- * getRPM()                                               -
- * getCrankAngle()                                        -
  * MAX_STALL_TIME                                         n/a
  * triggerToothAngleIsCorrect                             y
  * 
@@ -126,7 +126,7 @@ const char* const testParams::friendlyNames[] = {
   [LASTTOOTHTIMEMINUSONE_c] = "Last tooth time minus one",
   [RPM] = "RPM",
   [RPM_c_deltaPerThousand] = "Calculated RPM",
-  [MAXSTALLTIME] = "Max Stall time",
+  [STALLTIME_c] = "Stall time",
   [CRANKANGLE_c] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
 };
@@ -225,8 +225,8 @@ uint32_t testParams::getResult() const {
     case LASTTOOTHTIMEMINUSONE_c:
       result = toothLastMinusOneToothTime;
       break;
-    case MAXSTALLTIME:
-      result = MAX_STALL_TIME;
+    case STALLTIME_c:
+      result = getStallTime();
       break;
     default:
       break;
@@ -254,6 +254,7 @@ uint32_t testToothOneTime;
 uint32_t testToothOneMinusOneTime;
 uint32_t testRevolutionTime;
 byte testRevolutionCount;
+bool testHasSyncOrHalfsync;
 
 void decodingTest::compareResults() {
   for (int i = 0; i < eventCount; i++) {
@@ -298,7 +299,6 @@ void decodingTest::compareResults() {
     }
 
     if (events[i].tests != nullptr) {
-      
 
       if (individual_test_reports) {
         events[i].runTests(startTime);
@@ -321,6 +321,9 @@ void timedEvent::runTestsWrapper() {
 }
 
 void timedEvent::runTests(uint32_t testStartTime) {
+
+  testHasSyncOrHalfsync = hasSyncOrHalfsync();
+
   if (tests != nullptr) {
     for (int i = 0; i < testCount; i++) {
 
@@ -336,6 +339,28 @@ void timedEvent::runTests(uint32_t testStartTime) {
 
     }
   }
+}
+
+bool timedEvent::hasSyncOrHalfsync() {
+  bool result = false;
+  if (tests != nullptr) {
+    for (int i = 0; i < testCount; i++) {
+
+      result = tests[i].hasSyncOrHalfsync();
+      if (result == true) { break; }
+      
+    }
+  }
+  return result;
+}
+
+bool testParams::hasSyncOrHalfsync() const {
+  if (type == SYNC || type == HALFSYNC) {
+    if (expected == 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // This is needed because Unity tests cannot call non-static member functions or use arguments
@@ -370,6 +395,16 @@ void testParams::runTest(testResults* result) const {
       break;
     case TOOTHANGLE_c:
       expectedCalculated = testLastToothDegrees;
+      break;
+    case STALLTIME_c:
+      if (testHasSyncOrHalfsync == true) {
+        if (lastPRITRIGevent != nullptr) {
+          expectedCalculated = lastPRITRIGevent->tooth->degrees * 3333UL; // 3333,33 microseconds per degree at 50 revolutions per minute
+        }
+      }
+      else {
+        expectedCalculated = MAX_STALL_TIME; //TODO: Change this to calculate max stall time from maximum tooth length
+      }
       break;
     case RPM_c_deltaPerThousand:
       expectedCalculated = testLastRPM;
@@ -407,6 +442,7 @@ void decodingTest::resetTest() {
   testToothOneMinusOneTime = 0;
   testRevolutionTime = 0;
   testRevolutionCount = 0;
+  testHasSyncOrHalfsync = false;
   lastPRITRIGevent = nullptr;
 }
 

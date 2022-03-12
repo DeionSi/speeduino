@@ -313,7 +313,6 @@ static inline uint16_t stdGetRPM(uint16_t degreesOver)
  */
 uint32_t getStallTime() { //TODO: Untested
   // Calculate stall time based on current tooth gap length 
-
   uint32_t stallTime;
   noInterrupts();
   if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
