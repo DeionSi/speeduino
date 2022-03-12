@@ -28,7 +28,7 @@ class testParams {
       LASTTOOTHTIMEMINUSONE_c,
       RPM,
       RPM_c_deltaPerThousand,
-      MAXSTALLTIME,
+      STALLTIME_c,
       CRANKANGLE_c,
       ENUMEND,
     };
@@ -42,6 +42,7 @@ class testParams {
   public:
 
     uint32_t getResult() const;
+    bool hasSyncOrHalfsync() const;
     void runTest(testResults* result) const;
     static void runTestWrapper();
     const char* name() const;
@@ -63,6 +64,7 @@ class timedEvent {
     testResults* const results;
 
     void preTestsCommands();
+    bool hasSyncOrHalfsync();
 
   public:
     const timedEventType type;

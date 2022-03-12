@@ -39,7 +39,7 @@ testParams test0_unsynced0[] = {
   { testParams::SYNC, 0 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::MAXSTALLTIME, 200000-20, }, // -20 because of integer rounding errors
+  { testParams::STALLTIME_c, 0 },
 };
 // TODO: Separate calculated tests for shared usage
 testParams test0_sync1[] = {
@@ -54,6 +54,7 @@ testParams test0_sync1[] = {
   { testParams::LASTTOOTHTIME_c, 0, 4 },
   { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
   { testParams::CRANKANGLE_c, 0, 1 },
+  { testParams::STALLTIME_c, 0 },
 };
 // TODO: reset test global variables when losing sync
 testParams test0_crank[] = {
