@@ -56,7 +56,7 @@ class timedEvent {
     enum timedEventType {
       PRITRIG,
       TEST,
-      STALL, // The testing code needs to be told that it should stall
+      STALL,
     };
 
   private:
