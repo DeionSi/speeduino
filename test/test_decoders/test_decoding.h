@@ -67,6 +67,8 @@ class timedEvent {
 
     void preTestsCommands();
     bool hasSyncOrHalfsync();
+    void runTests(uint32_t testStartTime);
+    static void runTestsWrapper();
 
   public:
     const timedEventType type;
@@ -76,10 +78,11 @@ class timedEvent {
     uint32_t triggeredAt = 0;
     static testResults* wrapperResult;
     static const testParams* wrapperTest;
+    static timedEvent* wrapperEvent;
+    static decodingTest* wrapperDecodingTest;
 
     void trigger(decodingTest* currentDecodingTest);
-    void runTests(uint32_t testStartTime);
-    static void runTestsWrapper();
+    void run(decodingTest* currentDecodingTest);
 
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results);
@@ -96,16 +99,14 @@ class decodingTest {
     bool verifyEventOrder() const;
     void decodingSetup();
     void compareResults();
-    static void resetTest();
 
   public:
     uint32_t startTime = 0;
-    static timedEvent* wrapperEvent;
-    static decodingTest* wrapperDecodingTest;
     
     void execute();
     void showTriggerlog();
     void stallCleanup();
+    static void resetTest();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
