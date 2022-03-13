@@ -137,20 +137,17 @@ const char* testParams::name() const {
 
 //************ Part 2: Gathering the results ************
 
-decodingTest* currentDecodingTest; //TODO: make it better or not needed
-
 void decodingTest::gatherResults() {
   startTime = micros();
   for (int i = 0; i < eventCount; i++) {
-    currentDecodingTest = this;
-    events[i].trigger(startTime);
+    events[i].trigger(this);
   }
 }
 
-void timedEvent::trigger(uint32_t testStartTime) {
+void timedEvent::trigger(decodingTest* currentDecodingTest) {
   // Delay until it's time to trigger
   if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
-    uint32_t delayUntil = time + testStartTime;
+    uint32_t delayUntil = time + currentDecodingTest->startTime;
     while(micros() < delayUntil) {};
   }
 
@@ -163,7 +160,7 @@ void timedEvent::trigger(uint32_t testStartTime) {
       break;
 
     case STALL:
-      decodingTest::stallCleanup();
+      currentDecodingTest->stallCleanup();
       break;
 
     case TEST:
@@ -233,6 +230,13 @@ uint32_t testParams::getResult() const {
   }
 
   return result;
+}
+
+
+void decodingTest::stallCleanup() {
+  resetDecoderState();
+  currentStatus.RPM = 0; // Extra variable which is not owned by the decoder but is used by the decoder // TODO: Make the decoder own this variable?
+  decodingSetup();
 }
 
 //************ Part 3: Running the tests (comparing results and giving output) ************
@@ -445,12 +449,6 @@ void decodingTest::resetTest() {
   testRevolutionCount = 0;
   testHasSyncOrHalfsync = false;
   lastPRITRIGevent = nullptr;
-}
-
-void decodingTest::stallCleanup() {
-  resetDecoderState();
-  currentStatus.RPM = 0; // Extra variable which is not owned by the decoder but is used by the decoder // TODO: Make the decoder own this variable?
-  currentDecodingTest->decodingSetup();
 }
 
 void decodingTest::showTriggerlog() {
