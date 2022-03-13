@@ -4,6 +4,8 @@
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
 #define timedEventArrayTestEntry(testEntry) testEntry, countof(testEntry), new testResults[countof(testEntry)]
 
+class decodingTest;
+
 struct testTooth {
   uint16_t angle;
   uint16_t degrees;
@@ -75,7 +77,7 @@ class timedEvent {
     static testResults* wrapperResult;
     static const testParams* wrapperTest;
 
-    void trigger(uint32_t testStartTime);
+    void trigger(decodingTest* currentDecodingTest);
     void runTests(uint32_t testStartTime);
     static void runTestsWrapper();
 
@@ -103,7 +105,7 @@ class decodingTest {
     
     void execute();
     void showTriggerlog();
-    static void stallCleanup();
+    void stallCleanup();
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
