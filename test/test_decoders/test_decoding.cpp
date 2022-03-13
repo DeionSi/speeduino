@@ -111,8 +111,8 @@ testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
 testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
 
-testParams::testParams(const timedTestType a_type, const uint32_t a_expected) : type(a_type), expected(a_expected) {};
-testParams::testParams(const timedTestType a_type, const uint32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
+testParams::testParams(const timedTestType a_type, const int32_t a_expected) : type(a_type), expected(a_expected) {};
+testParams::testParams(const timedTestType a_type, const int32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
 const char* const testParams::friendlyNames[] = {
   [SYNC] = "Sync",
@@ -184,8 +184,8 @@ void timedEvent::preTestsCommands() {
   doCrankSpeedCalcs();
 }
 
-uint32_t testParams::getResult() const {
-  uint32_t result = 0;
+int32_t testParams::getResult() const {
+  int32_t result = 0;
 
   switch(type) {
     case CRANKANGLE_c:
@@ -375,7 +375,7 @@ void testParams::runTestWrapper() {
 
 void testParams::runTest(testResults* result) const {
 
-  uint32_t expectedCalculated = expected;
+  int32_t expectedCalculated = expected;
   uint16_t deltaCalculated = delta;
 
   // Calculate our crank angle compare angle based on how much time passed until test
@@ -384,6 +384,9 @@ void testParams::runTest(testResults* result) const {
       if (testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
         uint32_t delay = result->retrievedAt - lastPRITRIGevent->triggeredAt;
         expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / testLastUsPerDegree);
+        expectedCalculated += configPage4.triggerAngle;
+        while (expectedCalculated >= CRANK_ANGLE_MAX) { expectedCalculated -= CRANK_ANGLE_MAX; }
+        while (expectedCalculated < 0) { expectedCalculated += CRANK_ANGLE_MAX; }
       }
       break;
     case LASTTOOTHTIME_c:
@@ -422,7 +425,7 @@ void testParams::runTest(testResults* result) const {
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
     char testMessage[testMessageLength];
-    snprintf(testMessage, testMessageLength, "result %lu expected %lu delta %u ", result->value, expectedCalculated, deltaCalculated);
+    snprintf(testMessage, testMessageLength, "result %ld expected %ld delta %u ", result->value, expectedCalculated, deltaCalculated);
     UnityPrint(testMessage);
     for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
   }

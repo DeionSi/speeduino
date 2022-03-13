@@ -4,6 +4,8 @@
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
 #define timedEventArrayTestEntry(testEntry) testEntry, countof(testEntry), new testResults[countof(testEntry)]
 
+//TODO: Rename structures to be more logical
+
 class decodingTest;
 
 struct testTooth {
@@ -12,7 +14,7 @@ struct testTooth {
 };
 
 struct testResults {
-  uint32_t value;
+  int32_t value;
   uint32_t retrievedAt;
 };
 
@@ -38,18 +40,18 @@ class testParams {
   private:
     const timedTestType type;
     static const char* const friendlyNames[];
-    const uint32_t expected;
+    const int32_t expected;
     const uint16_t delta = 0;
 
   public:
 
-    uint32_t getResult() const;
+    int32_t getResult() const;
     bool hasSyncOrHalfsync() const;
     void runTest(testResults* result) const;
     static void runTestWrapper();
     const char* name() const;
-    testParams(const timedTestType, const uint32_t);
-    testParams(const timedTestType, const uint32_t, const uint16_t);
+    testParams(const timedTestType, const int32_t);
+    testParams(const timedTestType, const int32_t, const uint16_t);
 
 };
 
