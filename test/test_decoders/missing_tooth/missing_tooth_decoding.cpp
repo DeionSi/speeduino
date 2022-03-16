@@ -33,13 +33,18 @@ void mt_test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-testParams unsynced_0loss[] = {
+const testParams unsynced_0loss[] = {
   { testParams::SYNC, 0 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
 };
+const testParams unsynced_2loss[] = {
+  { testParams::SYNC, 0 },
+  { testParams::HALFSYNC, 0 },
+  { testParams::SYNCLOSSCOUNT, 2 },
+};
 // TODO: Separate calculated tests for shared usage
-testParams mt_test0_sync[] = {
+const testParams mt_test0_sync[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
@@ -53,31 +58,46 @@ testParams mt_test0_sync[] = {
   { testParams::CRANKANGLE_c, 0, 1 },
 };
 
-testTooth mt_t1  { 0, 30 };
-testTooth mt_t2  { 30, 30 };
-testTooth mt_t3  { 60, 30 };
-testTooth mt_t4  { 90, 30 };
-testTooth mt_t5  { 120, 30 };
-testTooth mt_t6  { 150, 30 };
-testTooth mt_t7  { 180, 30 };
-testTooth mt_t8  { 210, 30 };
-testTooth mt_t9  { 240, 30 };
-testTooth mt_t10 { 270, 30 };
-testTooth mt_t11 { 300, 60 };
-testTooth mt_t13  { 0, 30 };
-testTooth mt_t14  { 30, 30 };
-testTooth mt_t15  { 60, 30 };
-testTooth mt_t16  { 90, 30 };
-testTooth mt_t17  { 120, 30 };
-testTooth mt_t18  { 150, 30 };
-testTooth mt_t19  { 180, 30 };
-testTooth mt_t20  { 210, 30 };
-testTooth mt_t21  { 240, 30 };
-testTooth mt_t22 { 270, 30 };
-testTooth mt_t23 { 300, 60 };
+const testParams mt_test0_syncloss1[] = {
+  { testParams::SYNC, 1 },
+  { testParams::HALFSYNC, 0 },
+  { testParams::SYNCLOSSCOUNT, 1 },
+  { testParams::RPM, 5000, 20 },
+  { testParams::REVCOUNT_c, 0 },
+  { testParams::REVTIME_c, 0, 52 },
+  { testParams::TOOTHANGLECORRECT, 1 },
+  { testParams::TOOTHANGLE_c, 0 },
+  { testParams::LASTTOOTHTIME_c, 0, 4 },
+  { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
+  { testParams::CRANKANGLE_c, 0, 1 },
+};
+
+const testTooth mt_t1  { 0, 30 };
+const testTooth mt_t2  { 30, 30 };
+const testTooth mt_t3  { 60, 30 };
+const testTooth mt_t4  { 90, 30 };
+const testTooth mt_t5  { 120, 30 };
+const testTooth mt_t6  { 150, 30 };
+const testTooth mt_t7  { 180, 30 };
+const testTooth mt_t8  { 210, 30 };
+const testTooth mt_t9  { 240, 30 };
+const testTooth mt_t10 { 270, 30 };
+const testTooth mt_t11 { 300, 60 };
+const testTooth mt_t13  { 0, 30 };
+const testTooth mt_t14  { 30, 30 };
+const testTooth mt_t15  { 60, 30 };
+const testTooth mt_t16  { 90, 30 };
+const testTooth mt_t17  { 120, 30 };
+const testTooth mt_t18  { 150, 30 };
+const testTooth mt_t19  { 180, 30 };
+const testTooth mt_t20  { 210, 30 };
+const testTooth mt_t21  { 240, 30 };
+const testTooth mt_t22 { 270, 30 };
+const testTooth mt_t23 { 300, 60 };
 
 //TODO: a stalling test to verify all parameters are reset
 //TODO: Cranking tests
+//TODO: Test for strong acceleration / deceleration
 timedEvent mt_test0_events[] {
   { timedEvent::PRITRIG, 1000,  timedEventArrayTestEntry(unsynced_0loss), &mt_t1 },
   { timedEvent::PRITRIG, 2000,  timedEventArrayTestEntry(unsynced_0loss), &mt_t2 },
@@ -120,16 +140,39 @@ timedEvent mt_test0_events[] {
   { timedEvent::PRITRIG, 155000, timedEventArrayTestEntry(mt_test0_sync), &mt_t1 },
   { timedEvent::PRITRIG, 156000, timedEventArrayTestEntry(mt_test0_sync), &mt_t2 },
   { timedEvent::PRITRIG, 157000, timedEventArrayTestEntry(mt_test0_sync), &mt_t3 },
-  { timedEvent::PRITRIG, 158000, timedEventArrayTestEntry(mt_test0_sync), &mt_t4 },
-  { timedEvent::PRITRIG, 159000, timedEventArrayTestEntry(mt_test0_sync), &mt_t5 },
-  { timedEvent::PRITRIG, 160000, timedEventArrayTestEntry(mt_test0_sync), &mt_t6 },
+//  { timedEvent::PRITRIG, 158000, timedEventArrayTestEntry(mt_test0_sync), &mt_t4 }, // Simulated lost trigger
+  { timedEvent::PRITRIG, 159000, &mt_t5 }, // TODO: Invalid input after tooth before, undefined behaviour or should it fail because of long input, or should it detect missed tooth and increment in the background?
+  { timedEvent::PRITRIG, 160000, &mt_t6 },
+  { timedEvent::PRITRIG, 161000, &mt_t7 },
+  { timedEvent::PRITRIG, 162000, &mt_t8 },
+  { timedEvent::PRITRIG, 163000, &mt_t9 },
+  { timedEvent::PRITRIG, 164000, &mt_t10 },
+  { timedEvent::PRITRIG, 165000, &mt_t11 }, 
+  { timedEvent::PRITRIG, 167000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t1 }, // Lost trigger should be detected here
+  { timedEvent::PRITRIG, 168000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t2 },
+  { timedEvent::PRITRIG, 169000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t3 },
+  { timedEvent::PRITRIG, 170000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t4 },
+  { timedEvent::PRITRIG, 171000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t5 },
+  { timedEvent::PRITRIG, 172000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t6 },
+  { timedEvent::PRITRIG, 173000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t7 },
+  { timedEvent::PRITRIG, 174000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t8 },
+  { timedEvent::PRITRIG, 174400 }, // Extra fake signal
+  { timedEvent::PRITRIG, 175000, &mt_t9 }, //Invalid input here so don't test anything more
+  { timedEvent::PRITRIG, 176000, &mt_t10 },
+  { timedEvent::PRITRIG, 177000, timedEventArrayTestEntry(unsynced_2loss), &mt_t11 }, // Extra trigger should be detected here (this is too short to be the missing tooth)
+  { timedEvent::PRITRIG, 179000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t1 },
+  { timedEvent::PRITRIG, 180000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t2 },
+  { timedEvent::PRITRIG, 181000, timedEventArrayTestEntry(mt_test0_syncloss1), &mt_t3 },
 };
+
+// TODO: What to do at sync loss?
+// TODO: Require tooth for trigger events
 
 void mt_test1_setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
   configPage4.triggerTeeth = 12; //TODO: Use different values
   configPage4.triggerMissingTeeth = 1; //TODO: Use different values
-  configPage4.triggerAngle = 210;
+  configPage4.triggerAngle = 243;
   configPage4.TrigSpeed = CRANK_SPEED; //TODO: Use different values
   configPage4.trigPatternSec = SEC_TRIGGER_SINGLE; //TODO: Use different values
   configPage4.PollLevelPolarity = HIGH;
