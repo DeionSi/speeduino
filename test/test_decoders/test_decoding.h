@@ -64,8 +64,8 @@ class timedEvent {
     };
 
   private:
-    const byte testCount;
-    testResults* const results;
+    const byte testCount = 0;
+    testResults* const results = nullptr;
 
     void preTestsCommands();
     bool hasSyncOrHalfsync();
@@ -75,7 +75,7 @@ class timedEvent {
   public:
     const timedEventType type;
     const uint32_t time;
-    const testParams* const tests;
+    const testParams* const tests = nullptr;
     const testTooth* const tooth = nullptr;
     uint32_t triggeredAt = 0;
     static testResults* wrapperResult;
@@ -88,6 +88,8 @@ class timedEvent {
 
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results);
+    timedEvent(const timedEventType type, const uint32_t time, const testTooth* const tooth);
+    timedEvent(const timedEventType type, const uint32_t time);
 };
 
 class decodingTest {

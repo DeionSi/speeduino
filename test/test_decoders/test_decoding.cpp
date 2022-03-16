@@ -111,6 +111,12 @@ testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
 testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
 
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testTooth* const a_tooth) :
+type(a_type), time(a_time), tooth(a_tooth) { };
+
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time) :
+type(a_type), time(a_time) { };
+
 testParams::testParams(const timedTestType a_type, const int32_t a_expected) : type(a_type), expected(a_expected) {};
 testParams::testParams(const timedTestType a_type, const int32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
@@ -267,7 +273,7 @@ void decodingTest::compareResults() {
 }
 
 void timedEvent::run(decodingTest* currentDecodingTest) {
-  if (type == timedEvent::PRITRIG) {
+  if (type == timedEvent::PRITRIG && tooth != nullptr) {
     // Calculate expected tooth times, tooth one times and revolution count
     if (tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
       testToothOneMinusOneTime = testToothOneTime;
