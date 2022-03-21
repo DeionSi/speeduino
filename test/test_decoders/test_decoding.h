@@ -2,7 +2,7 @@
 #define TEST_DECODING_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define timedEventArrayTestEntry(testEntry) testEntry, countof(testEntry), new testResults[countof(testEntry)]
+#define timedEventArrayTestEntry(testEntry) new testGroup { testEntry, countof(testEntry), new testResults[countof(testEntry)] }
 
 //TODO: Rename structures to be more logical
 
@@ -55,6 +55,12 @@ class testParams {
 
 };
 
+struct testGroup {
+  const testParams* const tests;
+  const byte testCount;
+  testResults* const results;
+};
+
 class timedEvent {
   public:
     enum timedEventType {
@@ -64,8 +70,6 @@ class timedEvent {
     };
 
   private:
-    const byte testCount = 0;
-    testResults* const results = nullptr;
 
     void preTestsCommands();
     bool hasSyncOrHalfsync();
@@ -75,7 +79,7 @@ class timedEvent {
   public:
     const timedEventType type;
     const uint32_t time;
-    const testParams* const tests = nullptr;
+    testGroup* const tests = nullptr;
     const testTooth* const tooth = nullptr;
     uint32_t triggeredAt = 0;
     static testResults* wrapperResult;
@@ -86,8 +90,8 @@ class timedEvent {
     void trigger(decodingTest* currentDecodingTest);
     void run(decodingTest* currentDecodingTest);
 
-    timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results, const testTooth* const tooth);
-    timedEvent(const timedEventType type, const uint32_t time, const testParams* const tests, const byte testCount, testResults* const results);
+    timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests, const testTooth* const tooth);
+    timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests);
     timedEvent(const timedEventType type, const uint32_t time, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time);
 };
