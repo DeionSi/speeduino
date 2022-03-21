@@ -105,11 +105,11 @@ void decodingTest::decodingSetup() {
   interrupts();
 }
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results, const testTooth* const a_tooth) :
-testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, testGroup* const a_tests, const testTooth* const a_tooth) :
+type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testParams* const a_tests, const byte a_testCount, testResults* const a_results) :
-testCount(a_testCount), results(a_results), type(a_type), time(a_time), tests(a_tests) { };
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, testGroup* const a_tests) :
+type(a_type), time(a_time), tests(a_tests) { };
 
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testTooth* const a_tooth) :
 type(a_type), time(a_time), tooth(a_tooth) { };
@@ -178,9 +178,9 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
   // Get data from tests
   if (tests != nullptr) {
     preTestsCommands();
-    for (int i = 0; i < testCount; i++) {
-      results[i].retrievedAt = micros();
-      results[i].value = tests[i].getResult();
+    for (int i = 0; i < tests->testCount; i++) {
+      tests->results[i].retrievedAt = micros();
+      tests->results[i].value = tests->tests[i].getResult();
     }
   }
 }
@@ -336,16 +336,17 @@ void timedEvent::runTests(uint32_t testStartTime) {
   testHasSyncOrHalfsync = hasSyncOrHalfsync();
 
   if (tests != nullptr) {
-    for (int i = 0; i < testCount; i++) {
+    for (int i = 0; i < tests->testCount; i++) {
 
       if (individual_test_reports) {
-        wrapperTest = &tests[i];
-        wrapperResult = &results[i];
-        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", time, results[i].retrievedAt - testStartTime, tests[i].name() );
-        UnityDefaultTestRun(tests[i].runTestWrapper, unityMessage, __LINE__);
+        wrapperTest = &tests->tests[i];
+        wrapperResult = &tests->results[i];
+
+        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", time, tests->results[i].retrievedAt - testStartTime, tests->tests[i].name() );
+        UnityDefaultTestRun(tests->tests[i].runTestWrapper, unityMessage, __LINE__);
       }
       else {
-        tests[i].runTest(&results[i]);
+        tests->tests[i].runTest(&tests->results[i]);
       }
 
     }
@@ -355,9 +356,9 @@ void timedEvent::runTests(uint32_t testStartTime) {
 bool timedEvent::hasSyncOrHalfsync() {
   bool result = false;
   if (tests != nullptr) {
-    for (int i = 0; i < testCount; i++) {
+    for (int i = 0; i < tests->testCount; i++) {
 
-      result = tests[i].hasSyncOrHalfsync();
+      result = tests->tests[i].hasSyncOrHalfsync();
       if (result == true) { break; }
       
     }
