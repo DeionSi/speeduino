@@ -4989,6 +4989,7 @@ inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
     }
   }
   //TODO: Currently the first gap of a TriggerGapGroup needs to start at 0 degrees. Make it so it doesn't have to or make it a requirement that it has to
+  //TODO: How to handle wheels which doesn't have a tooth at 180 degrees for CAM_SPEED
   else { // When we have sync we handle the once per revolution tasks at 0 degrees (and at 360 degrees if we have a cam_speed wheel)
     if ( (priGapGroups[priGapGroupCurrent].startAngle == 0 && priGapCurrent == 0) ||
          (configPage4.TrigSpeed == CAM_SPEED && priGapGroupCurrent == camSpeedCrank_revolutionTwo_gapGroup && priGapCurrent == camSpeedCrank_revolutionTwo_gap) ) {
