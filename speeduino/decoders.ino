@@ -4876,7 +4876,6 @@ void triggerSetEndTeeth_Vmax()
 
 /* Important information
  * Primary should always read the correct crank position (ie, cams should be connected to secondary)
- * After finding tooth #1 every tooth will be checked during a full primary rotation before sync is achieved (to be changed with "early sync")
  * Max tooth count per 
  */
 
@@ -4886,7 +4885,6 @@ byte priGapGroupsCount;
 volatile byte priGapGroupCurrent;
 
 volatile int16_t priGapCurrent;
-volatile uint16_t priGapPreviousLength;
 
 // When this becomes the current gap we can declare sync.
 byte priSyncGuaranteed_gapGroup;
@@ -4918,7 +4916,6 @@ void triggerSetup_UniversalDecoder_Reset()
   revolutionOne = false;
 
   toothLastToothTime = 0;
-  priGapPreviousLength = 0;
   priGapCurrent = -1;
   lastGap = 0;
   priGapGroupCurrent = 0;
@@ -4932,6 +4929,9 @@ void triggerSetup_UniversalDecoder_Reset()
   secondaryToothCount = 0;
   secondaryHasSync = false;
   secondaryHasPassedToothOne = false;
+
+  triggerToothAngle = priGapGroups[0].lengthDegrees; // Is updated automatically for gap-check but has to be set here for only-evenly-spaced
+  triggerToothAngleIsCorrect = true; //TODO: This variable should not be required
   
   /*
   //Primary trigger
@@ -4947,14 +4947,11 @@ void triggerSetup_UniversalDecoder_Reset()
 #endif
 
 //TODO: set volatile to local variables and then set then back at end of function
-// Sync is achieved when the whole pattern is traversed
 inline void triggerPri_UniversalDecoder_sync(unsigned long &curTime) {
   
   //priGapGroupCurrent is the current gap in priGapGroups (one priGapGroups can contain multiple gaps) and priGapCurrent is the current gap in one TriggerGapGroup.
   if (priGapCurrent >= priGapGroups[priGapGroupCurrent].count) {
     priGapCurrent = 0;
-
-    priGapPreviousLength = priGapGroups[priGapGroupCurrent].lengthDegrees;
 
     priGapGroupCurrent++;
     if (priGapGroupCurrent >= priGapGroupsCount) {
@@ -5047,7 +5044,7 @@ void triggerPri_UniversalDecoder_gapCheck() {
           BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
           currentStatus.syncLossCounter++;
         }
-        // Maybe just call triggerSetup_UniversalDecoder_Reset instead?
+        // Maybe just call triggerSetup_UniversalDecoder_Reset instead? maybe not?: toothLastToothTime may not be reset
         currentStatus.startRevolutions = 0;
         toothOneMinusOneTime = 0;
         toothOneTime = 0;
@@ -5055,6 +5052,7 @@ void triggerPri_UniversalDecoder_gapCheck() {
         priGapCurrent = -1;
       }
       else {
+        if (toothOneTime == 0) { toothOneTime = toothLastToothTime; } // Needs to be retrieved now otherwise this time will be forgotten once we reach priSyncGuaranteed.
         priGapCurrent++;
       }
     }
@@ -5062,10 +5060,17 @@ void triggerPri_UniversalDecoder_gapCheck() {
       priGapCurrent++;
     }
 
+    if (priGapCurrent == 1) { // Update triggerToothAngle once we've passed the first tooth of the group
+      triggerToothAngle = priGapGroups[priGapGroupCurrent].lengthDegrees;
+    }
+
     triggerPri_UniversalDecoder_sync(curTime);
   }
 
-  if (toothLastToothTime > 0) { lastGap = curGap; }
+  if (toothLastToothTime > 0) {
+    lastGap = curGap;
+    toothLastMinusOneToothTime = toothLastToothTime; //TODO: Should not be required.
+  }
   toothLastToothTime = curTime;
 }
 
@@ -5099,7 +5104,10 @@ void triggerPri_UniversalDecoder_OnlyEvenlySpacedTeeth() {
 
   triggerPri_UniversalDecoder_sync(curTime);
 
-  if (toothLastToothTime > 0) { lastGap = curTime - toothLastToothTime; }
+  if (toothLastToothTime > 0) {
+    lastGap = curGap;
+    toothLastMinusOneToothTime = toothLastToothTime; //TODO: Should not be required.
+  }
   toothLastToothTime = curTime;
 }
 
@@ -5173,19 +5181,16 @@ int getCrankAngle_UniversalDecoder()
   int tempPriGapCurrent = priGapCurrent;
   unsigned long tempToothLastToothTime = toothLastToothTime;
   unsigned long tempLastGap = lastGap;
-  uint16_t tempToothLastLength = priGapPreviousLength;
+  uint16_t tempTriggerToothAngle = triggerToothAngle;
   uint8_t temPriGapGroupCurrent = priGapGroupCurrent;
   bool tempRevolutionOne = revolutionOne;
   interrupts();
-
-  // If we are at a TriggerGapGroup repetition the previous gap is the same as the current gap
-  if (tempPriGapCurrent > 0) { tempToothLastLength = priGapGroups[temPriGapGroupCurrent].lengthDegrees; }
 
   //Estimate the number of degrees travelled since the last tooth}
   elapsedTime = (curTime - tempToothLastToothTime); //The time passed since the last tooth
   int crankAngle = configPage4.triggerAngle + priGapGroups[temPriGapGroupCurrent].startAngle + (tempPriGapCurrent * priGapGroups[temPriGapGroupCurrent].lengthDegrees); // Degree at the last seen tooth
 
-  crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempToothLastLength); //optimize this?
+  crankAngle += map(elapsedTime, 0, tempLastGap, 0, tempTriggerToothAngle); //optimize this?
 
   //TODO: Manual: Level for 1st phase is only relevant for sequential,
   if ( (configPage4.TrigSpeed == CRANK_SPEED && configPage4.PollLevelPolarity == tempRevolutionOne) ||
