@@ -2,7 +2,7 @@
 #define TEST_DECODING_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define timedEventArrayTestEntry(testEntry) new testGroup { testEntry, countof(testEntry), new testResults[countof(testEntry)] }
+#define testGroupEntry(testEntry) new testGroup { testEntry, countof(testEntry), new testResults[countof(testEntry)] }
 
 //TODO: Rename structures to be more logical
 

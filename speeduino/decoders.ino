@@ -351,7 +351,7 @@ inline bool isDecoderStalled(uint32_t stallTime) { //TODO: Untested {
 /**
  * Resets most decoder variables
  */
-inline void resetDecoderState() {
+void resetDecoderState() {
   //Decoder output variables
   toothLastToothTime = 0;
   toothLastMinusOneToothTime = 0;

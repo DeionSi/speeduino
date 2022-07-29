@@ -42,7 +42,11 @@
 void loggerPrimaryISR();
 void loggerSecondaryISR();
 
+#ifdef UNIT_TEST
+extern void resetDecoderState();
+#else
 inline void resetDecoderState();
+#endif
 inline bool isDecoderStalled(uint32_t);
 inline uint32_t getStallTime();
 

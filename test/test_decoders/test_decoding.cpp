@@ -48,6 +48,8 @@
 #include "init.h"
 #include "test_decoding.h"
 
+
+
 // Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
@@ -237,7 +239,6 @@ int32_t testParams::getResult() const {
 
   return result;
 }
-
 
 void decodingTest::stallCleanup() {
   resetDecoderState();
