@@ -184,9 +184,11 @@ void loop()
     // if (configPage2.displayType && (mainLoopCount & 255) == 1) { updateDisplay();}
 
     currentLoopTime = micros_safe();
+    noInterrupts(); // Make sure we can reset everything before any other interrupts fire. It's also required for the isDecoderStalled function.
     unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
     if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
-    {
+    { //Engine is not stalled so continue as normal
+      interrupts();
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
       currentStatus.RPMdiv100 = div100(currentStatus.RPM);
@@ -194,7 +196,7 @@ void loop()
       currentStatus.fuelPumpOn = true; //Not sure if this is needed.
     }
     else
-    {
+    { //Engine is stalled so reset "everything"
       //We reach here if the time between teeth is too great. This VERY likely means the engine has stopped
       currentStatus.RPM = 0;
       currentStatus.RPMdiv100 = 0;
@@ -227,6 +229,8 @@ void loop()
       DISABLE_VVT_TIMER();
       boostDisable();
       if(configPage4.ignBypassEnabled > 0) { digitalWrite(pinIgnBypass, LOW); } //Reset the ignition bypass ready for next crank attempt
+
+      interrupts();
     }
 
     //***Perform sensor reads***
