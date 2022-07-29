@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <globals.h>
 #include <unity.h>
-#include "missing_tooth/missing_tooth_decoding.h"
+#include "unidec_missing_tooth/unidec_missing_tooth_decoding.h"
 
 void setup()
 {
@@ -16,7 +16,7 @@ void setup()
 
     //testMissingTooth();
     //testDualWheel();
-    testDecodingMissingTooth();
+    testUnidecDecodingMissingTooth();
 
     UNITY_END(); // stop unit testing
 }
