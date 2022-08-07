@@ -2,7 +2,8 @@
 #include "unity.h"
 #include "globals.h"
 #include "decoders.h"
-#include "../test_decoding.h"
+#include "program.h"
+#include "shared.h"
 
 /* Instructions:
  * Tooth one is identified by angle 0
@@ -33,21 +34,6 @@ void ud_mt_test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-const testParams unsynced_0loss[] = {
-  { testParams::SYNC, 0 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 0 },
-};
-const testParams unsynced_1loss[] = {
-  { testParams::SYNC, 0 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 1 },
-};
-const testParams unsynced_2loss[] = {
-  { testParams::SYNC, 0 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 2 },
-};
 // TODO: Separate calculated tests for shared usage
 const testParams ud_mt_test0_sync[] = {
   { testParams::SYNC, 1 },
@@ -184,7 +170,7 @@ timedEvent ud_mt_test0_events[] {
 // TODO: What to do at sync loss?
 // TODO: Require tooth for trigger events
 
-void mt_test1_setup() {
+void ud_mt_test1_setup() {
   configPage4.TrigPattern = DECODER_MISSING_TOOTH; //TODO: Use different values
   configPage4.triggerTeeth = 12; //TODO: Use different values
   configPage4.triggerMissingTeeth = 1; //TODO: Use different values
@@ -208,12 +194,12 @@ void mt_test1_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-decodingTest decodingTests[] = {
+decodingTest ud_mt_decodingTests[] = {
   { "Missing tooth test 0, 12-1 wasted spark", ud_mt_test0_setup, ud_mt_test0_events, countof(ud_mt_test0_events) },
 };
 
 void testUnidecDecodingMissingTooth() {
-  for (auto testData : decodingTests) {
+  for (auto testData : ud_mt_decodingTests) {
     testData.execute();
     testData.showTriggerlog();
   }
