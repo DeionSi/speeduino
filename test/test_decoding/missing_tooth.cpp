@@ -2,7 +2,7 @@
 #include "unity.h"
 #include "globals.h"
 #include "decoders.h"
-#include "../test_decoding.h"
+#include "program.h"
 
 /* Instructions:
  * Tooth one is identified by angle 0

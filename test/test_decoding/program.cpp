@@ -46,9 +46,7 @@
 #include "crankMaths.h"
 #include "unity.h"
 #include "init.h"
-#include "test_decoding.h"
-
-
+#include "program.h"
 
 // Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event

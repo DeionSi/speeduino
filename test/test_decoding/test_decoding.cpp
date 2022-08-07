@@ -1,8 +1,7 @@
 #include <Arduino.h>
 #include <globals.h>
 #include <unity.h>
-#include "missing_tooth\missing_tooth.h"
-#include "dual_wheel\dual_wheel.h"
+#include "missing_tooth.h"
 
 void setup()
 {
@@ -12,10 +11,12 @@ void setup()
     // if board doesn't support software reset via Serial.DTR/RTS
     delay(2000);
 
-    UNITY_BEGIN();    // IMPORTANT LINE!
+    //UNITY_BEGIN();    // IMPORTANT LINE!
+    UnityBegin("decodingTests");
 
-    testMissingTooth();
-    testDualWheel();
+    //testMissingTooth();
+    //testDualWheel();
+    testDecodingMissingTooth();
 
     UNITY_END(); // stop unit testing
 }

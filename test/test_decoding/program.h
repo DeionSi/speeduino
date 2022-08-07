@@ -1,5 +1,5 @@
-#ifndef TEST_DECODING_H
-#define TEST_DECODING_H
+#ifndef TEST_DECODING_PROGRAM_H
+#define TEST_DECODING_PROGRAM_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
 #define testGroupEntry(testEntry) new testGroup { testEntry, countof(testEntry), new testResults[countof(testEntry)] }
@@ -118,4 +118,4 @@ class decodingTest {
     decodingTest(const char* const name, void (*const decoderSetup)(), timedEvent* const events, const byte eventCount);
 };
 
-#endif /* TEST_DECODING_H */
+#endif /* TEST_DECODING_PROGRAM_H */
