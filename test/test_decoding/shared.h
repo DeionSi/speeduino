@@ -11,7 +11,7 @@ const testParams unsynced_0loss[] = {
 const testParams unsynced_1loss[] = {
   { testParams::SYNC, 0 },
   { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 0 },
+  { testParams::SYNCLOSSCOUNT, 1 },
 };
 const testParams unsynced_2loss[] = {
   { testParams::SYNC, 0 },
