@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "decoders.h"
 #include "program.h"
+#include "shared.h"
 
 /* Instructions:
  * Tooth one is identified by angle 0
@@ -33,16 +34,7 @@ void mt_test0_setup() {
   configPage10.TrigEdgeThrd = 0;
 }
 
-const testParams unsynced_0loss[] = {
-  { testParams::SYNC, 0 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 0 },
-};
-const testParams unsynced_2loss[] = {
-  { testParams::SYNC, 0 },
-  { testParams::HALFSYNC, 0 },
-  { testParams::SYNCLOSSCOUNT, 2 },
-};
+
 // TODO: Separate calculated tests for shared usage
 const testParams mt_test0_sync[] = {
   { testParams::SYNC, 1 },
