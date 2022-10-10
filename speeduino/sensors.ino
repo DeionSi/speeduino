@@ -157,6 +157,13 @@ static inline void validateMAP()
   }
 }
 
+inline uint16_t getMap() {
+  noInterrupts();
+  uint16_t tempReading = swfMAPlastInterval;
+  interrupts();
+  return tempReading;
+}
+
 static inline void instanteneousMAPReading()
 {
   //Update the calculation times and last value. These are used by the MAP based Accel enrich
@@ -164,27 +171,28 @@ static inline void instanteneousMAPReading()
   MAPlast_time = MAP_time;
   MAP_time = micros();
 
-  unsigned int tempReading;
+  uint16_t tempReading;
   //Instantaneous MAP readings
   /*#if defined(ANALOG_ISR_MAP)
     tempReading = AnChannel[pinMAP-A0];
   #else
     tempReading = analogRead(pinMAP);
     tempReading = analogRead(pinMAP);
-  #endif
+  #endif*/
   //Error checking
-  if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
-  else { mapErrorCount = 0; }*/
 
+  tempReading = getMap();
+
+  if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
+  else { mapErrorCount = 0; }
 
   //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
-  //if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
-  //else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
-
+  if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
+  else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
 
   // Min freq 80hz = 6250us between triggers (two per hertz) = 0 kPa pressure
   // Max freq 159hz = 3144,65us between triggers (two per hertz) = 101.6 kPa pressure
-  currentStatus.MAP = map(swfMAPlastInterval, 6250, 3145, 0, 102); //Get the current MAP value
+  currentStatus.MAP = map(tempReading, 6250, 3145, 0, 102); //Get the current MAP value
   //currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
   if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
   
@@ -208,7 +216,7 @@ static inline void instanteneousMAPReading()
 
 static inline void readMAP()
 {
-  unsigned int tempReading;
+  uint16_t tempReading;
   //MAP Sampling system
   switch(configPage2.mapSample)
   {

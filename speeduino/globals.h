@@ -239,8 +239,8 @@
 #define BIT_AIRCON_FAN            6 //Indicates whether the A/C fan is running
 #define BIT_AIRCON_UNUSED8        7
 
-#define VALID_MAP_MAX 1022 //The largest ADC value that is valid for the MAP sensor
-#define VALID_MAP_MIN 2 //The smallest ADC value that is valid for the MAP sensor
+#define VALID_MAP_MAX 6250 //The largest time between pulses that is valid for the MAP sensor
+#define VALID_MAP_MIN 3145 //The smallest time between pulses that is valid for the MAP sensor
 
 #ifndef UNIT_TEST 
 #define TOOTH_LOG_SIZE      127
