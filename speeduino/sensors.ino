@@ -181,8 +181,8 @@ static inline void instanteneousMAPReading()
   else { mapErrorCount = 0; }
 
   //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
-  if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
-  else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
+  //if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
+  //else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
 
   currentStatus.MAP = map(currentStatus.mapADC, 6250, 3145, 0, 102); //Get the current MAP value
   validateMAP();
