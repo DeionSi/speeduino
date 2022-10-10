@@ -159,6 +159,8 @@ static inline void validateMAP()
 
 inline uint16_t getMap() {
   noInterrupts();
+  // Min freq 80hz = 6250us between triggers (two per hertz) = 0 kPa pressure
+  // Max freq 159hz = 3144,65us between triggers (two per hertz) = 101.6 kPa pressure
   uint16_t tempReading = swfMAPlastInterval;
   interrupts();
   return tempReading;
@@ -175,19 +177,16 @@ static inline void instanteneousMAPReading()
   //Instantaneous MAP readings
   tempReading = getMap();
 
-  if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
+  if( (tempReading >= VALID_MAPADC_MAX) || (tempReading <= VALID_MAPADC_MIN) ) { mapErrorCount += 1; }
   else { mapErrorCount = 0; }
 
   //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
   if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
   else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
 
-  // Min freq 80hz = 6250us between triggers (two per hertz) = 0 kPa pressure
-  // Max freq 159hz = 3144,65us between triggers (two per hertz) = 101.6 kPa pressure
-  currentStatus.MAP = map(tempReading, 6250, 3145, 0, 102); //Get the current MAP value
-  //currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
-  if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
-  
+  currentStatus.MAP = map(currentStatus.mapADC, 6250, 3145, 0, 102); //Get the current MAP value
+  validateMAP();
+
   //Repeat for EMAP if it's enabled
   if(configPage6.useEMAP == true)
   {
@@ -195,7 +194,7 @@ static inline void instanteneousMAPReading()
     tempReading = analogRead(pinEMAP);
 
     //Error check
-    if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+    if( (tempReading < VALID_MAPADC_MAX) && (tempReading > VALID_MAPADC_MIN) )
       {
         currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
       }
@@ -224,15 +223,10 @@ static inline void readMAP()
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
-            tempReading = analogRead(pinMAP);
-            tempReading = analogRead(pinMAP);
-          #endif
+          tempReading = getMap();
 
           //Error check
-          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+          if( (tempReading < VALID_MAPADC_MAX) && (tempReading > VALID_MAPADC_MIN) )
           {
             currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
             MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
@@ -247,7 +241,7 @@ static inline void readMAP()
             tempReading = analogRead(pinEMAP);
 
             //Error check
-            if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+            if( (tempReading < VALID_MAPADC_MAX) && (tempReading > VALID_MAPADC_MIN) )
             {
               currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
               EMAPrunningValue += currentStatus.EMAPADC; //Add the current reading onto the total
@@ -267,7 +261,7 @@ static inline void readMAP()
             MAP_time = micros();
 
             currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
-            currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+            currentStatus.MAP = map(currentStatus.mapADC, 6250, 3145, 0, 102); //Get the current MAP value
             validateMAP();
 
             //If EMAP is enabled, the process is identical to the above
@@ -304,14 +298,9 @@ static inline void readMAP()
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ((MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
-            tempReading = analogRead(pinMAP);
-            tempReading = analogRead(pinMAP);
-          #endif
+          tempReading = getMap();
           //Error check
-          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+          if( (tempReading < VALID_MAPADC_MAX) && (tempReading > VALID_MAPADC_MIN) )
           {
             if( (unsigned long)tempReading < MAPrunningValue ) { MAPrunningValue = (unsigned long)tempReading; } //Check whether the current reading is lower than the running minimum
           }
@@ -327,7 +316,7 @@ static inline void readMAP()
           MAP_time = micros();
 
           currentStatus.mapADC = MAPrunningValue;
-          currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+          currentStatus.MAP = map(currentStatus.mapADC, 6250, 3145, 0, 102); //Get the current MAP value
           MAPcurRev = currentStatus.startRevolutions; //Reset the current rev count
           MAPrunningValue = 1023; //Reset the latest value so the next reading will always be lower
 
@@ -347,15 +336,10 @@ static inline void readMAP()
       {
         if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
         {
-          #if defined(ANALOG_ISR_MAP)
-            tempReading = AnChannel[pinMAP-A0];
-          #else
-            tempReading = analogRead(pinMAP);
-            tempReading = analogRead(pinMAP);
-          #endif
+          tempReading = getMap();
 
           //Error check
-          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+          if( (tempReading < VALID_MAPADC_MAX) && (tempReading > VALID_MAPADC_MIN) )
           {
             currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
             MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
@@ -375,7 +359,7 @@ static inline void readMAP()
             MAP_time = micros();
 
             currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
-            currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+            currentStatus.MAP = map(currentStatus.mapADC, 6250, 3145, 0, 102); //Get the current MAP value
             validateMAP();
           }
           else { instanteneousMAPReading(); }
