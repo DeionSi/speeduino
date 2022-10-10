@@ -173,14 +173,6 @@ static inline void instanteneousMAPReading()
 
   uint16_t tempReading;
   //Instantaneous MAP readings
-  /*#if defined(ANALOG_ISR_MAP)
-    tempReading = AnChannel[pinMAP-A0];
-  #else
-    tempReading = analogRead(pinMAP);
-    tempReading = analogRead(pinMAP);
-  #endif*/
-  //Error checking
-
   tempReading = getMap();
 
   if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
