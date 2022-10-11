@@ -28,15 +28,16 @@
 
 #define TPS_READ_FREQUENCY  30 //ONLY VALID VALUES ARE 15 or 30!!!
 
+#define MAP_SAMPLING_COUNT_START 2 // The count at which sampling of MAP starts (revolutions or ignitions)
+
 /*
 #if defined(CORE_AVR)
   #define ANALOG_ISR
 #endif
 */
 
-volatile byte flexCounter = 0;
-volatile unsigned long flexStartTime;
-volatile unsigned long flexPulseWidth;
+extern volatile byte flexCounter;
+extern volatile unsigned long flexPulseWidth;
 
 #if defined(CORE_AVR)
   #define READ_FLEX() ((*flex_pin_port & flex_pin_mask) ? true : false)
@@ -44,25 +45,24 @@ volatile unsigned long flexPulseWidth;
   #define READ_FLEX() digitalRead(pinFlex)
 #endif
 
-volatile byte knockCounter = 0;
-volatile uint16_t knockAngle;
+extern volatile byte knockCounter;
 
-unsigned long MAPrunningValue; //Used for tracking either the total of all MAP readings in this cycle (Event average) or the lowest value detected in this cycle (event minimum)
-unsigned long EMAPrunningValue; //As above but for EMAP
-unsigned int MAPcount; //Number of samples taken in the current MAP cycle
-uint32_t MAPcurRev; //Tracks which revolution we're sampling on
-bool auxIsEnabled;
-uint16_t MAPlast; /**< The previous MAP reading */
-unsigned long MAP_time; //The time the MAP sample was taken
-unsigned long MAPlast_time; //The time the previous MAP sample was taken
-volatile unsigned long vssTimes[VSS_SAMPLES] = {0};
-volatile byte vssIndex;
+extern bool auxIsEnabled;
+extern uint16_t MAPlast;
+extern unsigned long MAP_time;
+extern unsigned long MAPlast_time;
 
-
-//These variables are used for tracking the number of running sensors values that appear to be errors. Once a threshold is reached, the sensor reading will go to default value and assume the sensor is faulty
-byte mapErrorCount = 0;
-byte iatErrorCount = 0;
-byte cltErrorCount = 0;
+#ifdef UNIT_TEST
+extern uint16_t unitTestMAPinput;
+extern uint16_t unitTestEMAPinput;
+extern unsigned long MAPsamplingRunningValue;
+extern unsigned long EMAPsamplingRunningValue;
+extern bool instantaneousMAP;
+extern bool instantaneousEMAP;
+extern unsigned int MAPsamplingCount;
+extern unsigned int EMAPsamplingCount;
+extern uint32_t MAPsamplingNext;
+#endif
 
 /**
  * @brief Simple low pass IIR filter macro for the analog inputs
@@ -71,9 +71,7 @@ byte cltErrorCount = 0;
  */
 #define ADC_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
 
-static inline void instanteneousMAPReading(void) __attribute__((always_inline));
-static inline void readMAP(void) __attribute__((always_inline));
-static inline void validateMAP(void);
+void readManifoldPressures(void);
 void initialiseADC(void);
 void readTPS(bool useFilter=true); //Allows the option to override the use of the filter
 void readO2_2(void);

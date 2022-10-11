@@ -415,8 +415,6 @@ void initialiseAll(void)
     toothHistoryIndex = 0;
     toothLastToothTime = 0;
 
-    //Lookup the current MAP reading for barometric pressure
-    instanteneousMAPReading();
     readBaro();
     
     noInterrupts();
