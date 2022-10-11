@@ -807,7 +807,7 @@ struct config2 {
   uint16_t injAng[4];
 
   //config1 in ini
-  byte mapSample : 2;  ///< MAP sampling method (0=Instantaneous, 1=Cycle Average, 2=Cycle Minimum, 4=Ign. event average, See sensors.ino)
+  byte mapSample : 2;  ///< MAP sampling method (0=Instantaneous, 1=Cycle Average, 2=Cycle Minimum, 3=Ign. event average, See sensors.ino)
   byte strokes : 1;    ///< Engine cycle type: four-stroke (0) / two-stroke (1)
   byte injType : 1;    ///< Injector type 0=Port (INJ_TYPE_PORT), 1=Throttle Body / TBI (INJ_TYPE_TBODY)
   byte nCylinders : 4; ///< Number of cylinders

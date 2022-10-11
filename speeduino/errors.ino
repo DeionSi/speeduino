@@ -14,14 +14,28 @@ A full copy of the license may be found in the projects root directory
 byte errorCount = 0;
 byte errorCodes[4];
 
+// Returns true if the errorID is already active
+bool hasError(byte errorID)
+{
+  for (byte i = 0; i < errorCount; i++) {
+    if ( errorCodes[i] == errorID ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 byte setError(byte errorID)
 {
-  if(errorCount < MAX_ERRORS)
-  {
-    errorCodes[errorCount] = errorID;
-    errorCount++;
-    if(errorCount == 1) { BIT_SET(currentStatus.spark, BIT_SPARK_ERROR); } //Enable the error indicator
+  if (hasError(errorID) == false) { // Don't add the same error twice
+    if(errorCount < MAX_ERRORS)
+    {
+      errorCodes[errorCount] = errorID;
+      errorCount++;
+      if(errorCount == 1) { BIT_SET(currentStatus.spark, BIT_SPARK_ERROR); } //Enable the error indicator
+    }
   }
+
   return errorCount;
 }
 

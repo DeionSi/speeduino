@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "tests_crankmaths.h"
+#include "tests_sensor_map.h"
 
 #define UNITY_EXCLUDE_DETAILS
 
@@ -15,7 +16,8 @@ void setup()
 
     UNITY_BEGIN();    // IMPORTANT LINE!
 
-    testCrankMaths();
+    //testCrankMaths();
+    testSensorMAP();
 
     UNITY_END(); // stop unit testing
 }
