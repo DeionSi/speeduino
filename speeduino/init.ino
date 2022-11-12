@@ -350,6 +350,8 @@ void initialiseAll(void)
     BIT_CLEAR(currentStatus.engineProtectStatus, PROTECT_IO_ERROR); //Clear the I/O error bit. The bit will be set in initialiseADC() if there is problem in there.
     initialiseADC();
     initialiseProgrammableIO();
+    
+    attachInterrupt(digitalPinToInterrupt(pinFlex), swfMAPpulse, CHANGE);
 
     //Check whether the flex sensor is enabled and if so, attach an interrupt for it
     if(configPage2.flexEnabled > 0)

@@ -415,12 +415,13 @@ inline void readMAP(bool applyFilter)
   uint16_t tempReading;
 
   #ifndef UNIT_TEST
-    #if defined(ANALOG_ISR_MAP)
-      tempReading = AnChannel[pinMAP-A0];
-    #else
-      tempReading = analogRead(pinMAP);
-      tempReading = analogRead(pinMAP);
-    #endif
+    noInterrupts();
+    tempReading = swfMAPlastInterval;
+    interrupts();
+    // 0 kPa = max freq 159hz = 3144,65us between triggers (two per hertz)
+    // 101.6 kPa = min freq 80hz = 6250us between triggers (two per hertz)
+    // 102 kPa = 6262us
+    tempReading = map(tempReading, 6262, 3133, 0, 1023);
   #else
     tempReading = unitTestMAPinput;
   #endif
@@ -953,6 +954,13 @@ void flexPulse(void)
   {
     flexStartTime = micros(); //Start pulse width measurement.
   }
+}
+
+void swfMAPpulse(void)
+{
+  uint32_t swfMAPcurrentTime = micros();
+  swfMAPlastInterval = swfMAPcurrentTime - swfMAPlastTime;
+  swfMAPlastTime = swfMAPcurrentTime;
 }
 
 /*
