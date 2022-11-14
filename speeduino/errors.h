@@ -32,7 +32,7 @@
 #define ERR_DEFAULT_BAT_HIGH    130 //13v
 #define ERR_DEFAULT_BAT_LOW     130 //13v
 #define ERR_DEFAULT_MAP_LOW     80
-#define ERR_DEFAULT_EMAP_LOW    80 // TODO: What is a good value?
+#define ERR_DEFAULT_EMAP_LOW    100 // TODO: What is a good value?
 
 
 #define MAX_ERRORS  4 //The number of errors the system can hold simultaneously. Should be a power of 2
