@@ -43,8 +43,8 @@ struct sensorMAP_testsetting {
 
 const sensorMAP_testdata sensorMAP_testdata_instantaneous[] = {
   { .startRevolutions = 2, .ignitionCount = 2, .RPMdiv100 = 2, .testInput = 100,  .expected = 2400, .expectedADC = 100, .errMAP = 0, .expectedLast = 0, .engineProtectStatus = 1 },
-  { .startRevolutions = 2, .ignitionCount = 1, .RPMdiv100 = 1, .testInput = 0,  .expected = 80, .expectedADC = 100, .errMAP = ERR_MAP_LOW, .expectedLast = 2400, .engineProtectStatus = 0 },
-  { .startRevolutions = 2, .ignitionCount = 4, .RPMdiv100 = 2, .testInput = 750,  .expected = 17375, .expectedADC = 699, .errMAP = 0, .expectedLast = 80, .engineProtectStatus = 1 },
+  { .startRevolutions = 2, .ignitionCount = 1, .RPMdiv100 = 1, .testInput = 0,  .expected = -1, .expectedADC = 100, .errMAP = ERR_MAP_LOW, .expectedLast = 2400, .engineProtectStatus = 0 },
+  { .startRevolutions = 2, .ignitionCount = 4, .RPMdiv100 = 2, .testInput = 750,  .expected = 17375, .expectedADC = 699, .errMAP = 0, .expectedLast = -1, .engineProtectStatus = 1 },
   { .startRevolutions = 2, .ignitionCount = 3, .RPMdiv100 = 0, .testInput = 1024,  .expected = 25500, .expectedADC = 699, .errMAP = ERR_MAP_HIGH, .expectedLast = 17375, .engineProtectStatus = 0 },
   { .startRevolutions = 4, .ignitionCount = 0, .RPMdiv100 = 1, .testInput = 1022,  .expected = 24800, .expectedADC = 996, .errMAP = 0, .expectedLast = 25500, .engineProtectStatus = 1 },
   { .startRevolutions = 1, .ignitionCount = 0, .RPMdiv100 = 3, .testInput = 1022,  .expected = 25375, .expectedADC = 1019, .errMAP = 0, .expectedLast = 24800, .engineProtectStatus = 0 },
@@ -200,7 +200,7 @@ const sensorMAP_testdata sensorMAP_testdata_cycle_minimum[] = {
   { .startRevolutions = 9, .ignitionCount = 4, .RPMdiv100 = 15, .testInput = 4,  .expected = 1775, .expectedADC = 5, .errMAP = 0, .expectedLast = 1250, .engineProtectStatus = 1 },
   { .startRevolutions = 9, .ignitionCount = 0, .RPMdiv100 = 15, .testInput = 10,  .expected = 1775, .expectedADC = 9, .errMAP = 0, .expectedLast = 1250, .engineProtectStatus = 0 },
   { .startRevolutions = 10, .ignitionCount = 0, .RPMdiv100 = 15, .testInput = 0,  .expected = 25, .expectedADC = 9, .errMAP = ERR_MAP_LOW, .expectedLast = 1775, .engineProtectStatus = 1 },
-  { .startRevolutions = 11, .ignitionCount = 4, .RPMdiv100 = 15, .testInput = 250,  .expected = 25, .expectedADC = 231, .errMAP = 0, .expectedLast = 1775, .engineProtectStatus = 0 },
+  { .startRevolutions = 10, .ignitionCount = 4, .RPMdiv100 = 15, .testInput = 250,  .expected = 25, .expectedADC = 231, .errMAP = 0, .expectedLast = 1775, .engineProtectStatus = 0 },
   { .startRevolutions = 11, .ignitionCount = 3, .RPMdiv100 = 15, .testInput = 750,  .expected = 25, .expectedADC = 709, .errMAP = 0, .expectedLast = 1775, .engineProtectStatus = 1 },
   { .startRevolutions = 11, .ignitionCount = 1, .RPMdiv100 = 15, .testInput = 0,  .expected = 25, .expectedADC = 709, .errMAP = ERR_MAP_LOW, .expectedLast = 1775, .engineProtectStatus = 1 },
   { .startRevolutions = 11, .ignitionCount = 1, .RPMdiv100 = 15, .testInput = 900,  .expected = 25, .expectedADC = 885, .errMAP = 0, .expectedLast = 1775, .engineProtectStatus = 0 },
@@ -233,6 +233,10 @@ const sensorMAP_testdata sensorMAP_testdata_cycle_minimum[] = {
   { .startRevolutions = 31, .ignitionCount = 2, .RPMdiv100 = 15, .testInput = 500,  .expected = 4800, .expectedADC = 483, .errMAP = 0, .expectedLast = 3925, .engineProtectStatus = 1 },
   { .startRevolutions = 32, .ignitionCount = 3, .RPMdiv100 = 15, .testInput = 1021,  .expected = 11975, .expectedADC = 978, .errMAP = 0, .expectedLast = 4800, .engineProtectStatus = 1 },
   { .startRevolutions = 33, .ignitionCount = 4, .RPMdiv100 = 15, .testInput = 500,  .expected = 11975, .expectedADC = 537, .errMAP = 0, .expectedLast = 4800, .engineProtectStatus = 1 },
+  { .startRevolutions = 34, .ignitionCount = 4, .RPMdiv100 = 15, .testInput = 0,  .expected = 13325, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = 11975, .engineProtectStatus = 0 },
+  { .startRevolutions = 35, .ignitionCount = 2, .RPMdiv100 = 15, .testInput = 0,  .expected = 13325, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = 11975, .engineProtectStatus = 1 },
+  { .startRevolutions = 36, .ignitionCount = 3, .RPMdiv100 = 15, .testInput = 0,  .expected = -1, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = 13325, .engineProtectStatus = 1 },
+  { .startRevolutions = 37, .ignitionCount = 1, .RPMdiv100 = 15, .testInput = 500,  .expected = 12450, .expectedADC = 502, .errMAP = 0, .expectedLast = -1, .engineProtectStatus = 0 },
 };
 
 const sensorMAP_testdata sensorMAP_testdata_ignition_average[] = {
@@ -272,15 +276,15 @@ const sensorMAP_testdata sensorMAP_testdata_ignition_average[] = {
   { .startRevolutions = 4, .ignitionCount = 9, .RPMdiv100 = 15, .testInput = 4,  .expected = 7025, .expectedADC = 5, .errMAP = 0, .expectedLast = 6725, .engineProtectStatus = 0 },
   { .startRevolutions = 0, .ignitionCount = 9, .RPMdiv100 = 15, .testInput = 10,  .expected = 7025, .expectedADC = 9, .errMAP = 0, .expectedLast = 6725, .engineProtectStatus = 0 },
   { .startRevolutions = 0, .ignitionCount = 10, .RPMdiv100 = 15, .testInput = 0,  .expected = 225, .expectedADC = 9, .errMAP = ERR_MAP_LOW, .expectedLast = 7025, .engineProtectStatus = 0 },
-  { .startRevolutions = 4, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 250,  .expected = 5675, .expectedADC = 231, .errMAP = 0, .expectedLast = 225, .engineProtectStatus = 0 },
-  { .startRevolutions = 3, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 750,  .expected = 17625, .expectedADC = 709, .errMAP = 0, .expectedLast = 5675, .engineProtectStatus = 0 },
-  { .startRevolutions = 1, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 0,  .expected = 80, .expectedADC = 709, .errMAP = ERR_MAP_LOW, .expectedLast = 17625, .engineProtectStatus = 0 },
-  { .startRevolutions = 1, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 900,  .expected = 22025, .expectedADC = 885, .errMAP = 0, .expectedLast = 80, .engineProtectStatus = 0 },
-  { .startRevolutions = 3, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 1021,  .expected = 15100, .expectedADC = 1010, .errMAP = 0, .expectedLast = 22025, .engineProtectStatus = 0 },
-  { .startRevolutions = 3, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 1024,  .expected = 15100, .expectedADC = 1010, .errMAP = ERR_MAP_HIGH, .expectedLast = 22025, .engineProtectStatus = 0 },
-  { .startRevolutions = 0, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 900,  .expected = 15100, .expectedADC = 908, .errMAP = 0, .expectedLast = 22025, .engineProtectStatus = 0 },
-  { .startRevolutions = 0, .ignitionCount = 13, .RPMdiv100 = 15, .testInput = 500,  .expected = 23875, .expectedADC = 531, .errMAP = 0, .expectedLast = 15100, .engineProtectStatus = 0 },
-  { .startRevolutions = 4, .ignitionCount = 13, .RPMdiv100 = 15, .testInput = 0,  .expected = 23875, .expectedADC = 531, .errMAP = ERR_MAP_LOW, .expectedLast = 15100, .engineProtectStatus = 0 },
+  { .startRevolutions = 4, .ignitionCount = 10, .RPMdiv100 = 15, .testInput = 250,  .expected = 225, .expectedADC = 231, .errMAP = 0, .expectedLast = 7025, .engineProtectStatus = 0 },
+  { .startRevolutions = 3, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 750,  .expected = 5675, .expectedADC = 709, .errMAP = 0, .expectedLast = 225, .engineProtectStatus = 0 },
+  { .startRevolutions = 1, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 0,  .expected = 5675, .expectedADC = 709, .errMAP = ERR_MAP_LOW, .expectedLast = 225, .engineProtectStatus = 0 },
+  { .startRevolutions = 1, .ignitionCount = 11, .RPMdiv100 = 15, .testInput = 900,  .expected = 5675, .expectedADC = 885, .errMAP = 0, .expectedLast = 225, .engineProtectStatus = 0 },
+  { .startRevolutions = 3, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 1021,  .expected = 19825, .expectedADC = 1010, .errMAP = 0, .expectedLast = 5675, .engineProtectStatus = 0 },
+  { .startRevolutions = 3, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 1024,  .expected = 19825, .expectedADC = 1010, .errMAP = ERR_MAP_HIGH, .expectedLast = 5675, .engineProtectStatus = 0 },
+  { .startRevolutions = 0, .ignitionCount = 12, .RPMdiv100 = 15, .testInput = 900,  .expected = 19825, .expectedADC = 908, .errMAP = 0, .expectedLast = 5675, .engineProtectStatus = 0 },
+  { .startRevolutions = 0, .ignitionCount = 13, .RPMdiv100 = 15, .testInput = 500,  .expected = 23875, .expectedADC = 531, .errMAP = 0, .expectedLast = 19825, .engineProtectStatus = 0 },
+  { .startRevolutions = 4, .ignitionCount = 13, .RPMdiv100 = 15, .testInput = 0,  .expected = 23875, .expectedADC = 531, .errMAP = ERR_MAP_LOW, .expectedLast = 19825, .engineProtectStatus = 0 },
   { .startRevolutions = 1, .ignitionCount = 14, .RPMdiv100 = 15, .testInput = 100,  .expected = 13175, .expectedADC = 133, .errMAP = 0, .expectedLast = 23875, .engineProtectStatus = 0 },
   { .startRevolutions = 3, .ignitionCount = 14, .RPMdiv100 = 15, .testInput = 1024,  .expected = 13175, .expectedADC = 133, .errMAP = ERR_MAP_HIGH, .expectedLast = 23875, .engineProtectStatus = 0 },
   { .startRevolutions = 1, .ignitionCount = 14, .RPMdiv100 = 15, .testInput = 1024,  .expected = 13175, .expectedADC = 133, .errMAP = ERR_MAP_HIGH, .expectedLast = 23875, .engineProtectStatus = 0 },
@@ -305,21 +309,25 @@ const sensorMAP_testdata sensorMAP_testdata_ignition_average[] = {
   { .startRevolutions = 2, .ignitionCount = 31, .RPMdiv100 = 15, .testInput = 500,  .expected = 11975, .expectedADC = 483, .errMAP = 0, .expectedLast = 7175, .engineProtectStatus = 0 },
   { .startRevolutions = 3, .ignitionCount = 32, .RPMdiv100 = 15, .testInput = 1021,  .expected = 11975, .expectedADC = 978, .errMAP = 0, .expectedLast = 11975, .engineProtectStatus = 0 },
   { .startRevolutions = 4, .ignitionCount = 33, .RPMdiv100 = 15, .testInput = 500,  .expected = 24350, .expectedADC = 537, .errMAP = 0, .expectedLast = 11975, .engineProtectStatus = 0 },
+  { .startRevolutions = 4, .ignitionCount = 34, .RPMdiv100 = 15, .testInput = 0,  .expected = 13325, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = 24350, .engineProtectStatus = 0 },
+  { .startRevolutions = 2, .ignitionCount = 35, .RPMdiv100 = 15, .testInput = 0,  .expected = -1, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = 13325, .engineProtectStatus = 1 },
+  { .startRevolutions = 3, .ignitionCount = 36, .RPMdiv100 = 15, .testInput = 0,  .expected = -1, .expectedADC = 537, .errMAP = ERR_MAP_LOW, .expectedLast = -1, .engineProtectStatus = 1 },
+  { .startRevolutions = 1, .ignitionCount = 37, .RPMdiv100 = 15, .testInput = 500,  .expected = 12450, .expectedADC = 502, .errMAP = 0, .expectedLast = -1, .engineProtectStatus = 0 },
 };
 
 const sensorMAP_testsetting sensorMAP_testsettings[] = {
   // Instantaneous
-  //{ .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) }, // OK
-  //{ .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) },
   // Cycle average
-  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, countof(sensorMAP_testdata_cycle_average) }, // OK
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, countof(sensorMAP_testdata_cycle_average) },
   { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, countof(sensorMAP_testdata_cycle_average) },
   // Cycle minimum
-  //{ .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) }, // OK
-  //{ .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) },
   // Ignition average
-  //{ .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) }, //OK
-  //{ .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) },
 };
 
 void testSensorMAP_RunTestMAP() {
