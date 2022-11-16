@@ -52,13 +52,17 @@ extern uint16_t MAPlast;
 extern unsigned long MAP_time;
 extern unsigned long MAPlast_time;
 
+struct instantaneousManifoldPressure { // Pack two bits into one byte, saves memory
+  bool MAP : 1; // Used to ensure MAP is updated with instantaneous values until a full "cycle" of a non-instantaneous method has completed
+  bool EMAP : 1; // Used to ensure EMAP is updated with instantaneous values until a full "cycle" of a non-instantaneous method has completed
+};
+
 #ifdef UNIT_TEST
 extern uint16_t unitTestMAPinput;
 extern uint16_t unitTestEMAPinput;
 extern unsigned long MAPsamplingRunningValue;
 extern unsigned long EMAPsamplingRunningValue;
-extern bool instantaneousMAP;
-extern bool instantaneousEMAP;
+extern instantaneousManifoldPressure instantaneous;
 extern unsigned int MAPsamplingCount;
 extern unsigned int EMAPsamplingCount;
 extern uint32_t MAPsamplingNext;
