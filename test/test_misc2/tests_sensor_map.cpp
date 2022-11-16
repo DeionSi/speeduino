@@ -9,8 +9,7 @@ extern uint16_t unitTestMAPinput;
 extern uint16_t unitTestEMAPinput;
 extern unsigned long MAPsamplingRunningValue;
 extern unsigned long EMAPsamplingRunningValue;
-extern bool instantaneousMAP;
-extern bool instantaneousEMAP;
+extern instantaneousManifoldPressure instantaneous;
 extern unsigned int MAPsamplingCount;
 extern unsigned int EMAPsamplingCount;
 extern uint32_t MAPsamplingNext;
@@ -317,17 +316,17 @@ const sensorMAP_testdata sensorMAP_testdata_ignition_average[] = {
 
 const sensorMAP_testsetting sensorMAP_testsettings[] = {
   // Instantaneous
-  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) },
-  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, countof(sensorMAP_testdata_instantaneous) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, .testdataCount = countof(sensorMAP_testdata_instantaneous) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 0, .testdata = sensorMAP_testdata_instantaneous, .testdataCount = countof(sensorMAP_testdata_instantaneous) },
   // Cycle average
-  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, countof(sensorMAP_testdata_cycle_average) },
-  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, countof(sensorMAP_testdata_cycle_average) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, .testdataCount = countof(sensorMAP_testdata_cycle_average) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 1, .testdata = sensorMAP_testdata_cycle_average, .testdataCount = countof(sensorMAP_testdata_cycle_average) },
   // Cycle minimum
-  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) },
-  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, countof(sensorMAP_testdata_cycle_minimum) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, .testdataCount = countof(sensorMAP_testdata_cycle_minimum) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 2, .testdata = sensorMAP_testdata_cycle_minimum, .testdataCount = countof(sensorMAP_testdata_cycle_minimum) },
   // Ignition average
-  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) },
-  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, countof(sensorMAP_testdata_ignition_average) },
+  { .whichSensor = testMAP,  .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, .testdataCount = countof(sensorMAP_testdata_ignition_average) },
+  { .whichSensor = testEMAP, .sensorMin = -100, .sensorMax = 25500, .mapSample = 3, .testdata = sensorMAP_testdata_ignition_average, .testdataCount = countof(sensorMAP_testdata_ignition_average) },
 };
 
 void testSensorMAP_RunTestMAP() {
@@ -429,8 +428,8 @@ void testSensorMAP_ResetTest() {
   MAPlast = 0;
   MAPlast_time = 0;
   MAP_time = 0;
-  instantaneousMAP = true;
-  instantaneousEMAP = true;
+  instantaneous.MAP = true;
+  instantaneous.EMAP = true;
   configPage6.useEMAP = false;
   ignitionCount = 0;
   currentStatus.RPMdiv100 = 0;

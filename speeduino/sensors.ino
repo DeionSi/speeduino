@@ -42,8 +42,7 @@ volatile unsigned long flexPulseWidth;
 volatile byte knockCounter;
 volatile uint16_t knockAngle;
 
-bool instantaneousMAP = true; // Used to ensure MAP is updated with instantaneous values until a full "cycle" of a non-instantaneous method has completed
-bool instantaneousEMAP = true; // Used to ensure EMAP is updated with instantaneous values until a full "cycle" of a non-instantaneous method has completed
+instantaneousManifoldPressure instantaneous { .MAP = true, .EMAP = true };
 
 #ifdef UNIT_TEST
 uint16_t unitTestMAPinput;
@@ -238,7 +237,7 @@ void readMAP(void)
   switch (configPage2.mapSample) // Select MAP sampling system
   {
     case 0: //Instantaneous MAP readings
-      instantaneousMAP = true;
+      instantaneous.MAP = true;
       break;
 
     // The comments for case 1 also apply to case 2 and 3.
@@ -252,7 +251,7 @@ void readMAP(void)
 
           // This if-else makes sure we have data to average over and switchpoint has been reached, otherwise revert to instantaneous values
           if ( MAPsamplingRunningValue > 0 && MAPsamplingCount > 0 && currentStatus.RPMdiv100 >= configPage2.mapSwitchPoint ) {
-            instantaneousMAP = false;
+            instantaneous.MAP = false;
 
             // Update the calculation times and last value. These are used by the MAP based Accel enrich
             MAPlast = currentStatus.MAP;
@@ -262,7 +261,7 @@ void readMAP(void)
             currentStatus.MAP = fastMap10Bit( ldiv(MAPsamplingRunningValue, MAPsamplingCount).quot, configPage2.mapMin, configPage2.mapMax );
           }
           else {
-            instantaneousMAP = true;
+            instantaneous.MAP = true;
           }
 
           // Reset average calculation variables for next cycle
@@ -272,7 +271,7 @@ void readMAP(void)
         }
         // Instantaneously switch to instantaneous MAP if we dip below the switch point during a cycle
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousMAP = true;
+          instantaneous.MAP = true;
         }
 
         // Always collect (valid) values for averaging. It means we can switch to average as soon as the full cycle is concluded when switchpoint has been reached.
@@ -287,7 +286,7 @@ void readMAP(void)
         MAPsamplingNext = 0;
         MAPsamplingRunningValue = 0;
         MAPsamplingCount = 0;
-        instantaneousMAP = true;
+        instantaneous.MAP = true;
       }
 
       break;
@@ -299,7 +298,7 @@ void readMAP(void)
         if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
 
           if ( MAPsamplingRunningValue < 1023 && MAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneousMAP = false;
+            instantaneous.MAP = false;
 
             MAPlast = currentStatus.MAP;
             MAPlast_time = MAP_time;
@@ -308,7 +307,7 @@ void readMAP(void)
             currentStatus.MAP = fastMap10Bit( MAPsamplingRunningValue, configPage2.mapMin, configPage2.mapMax );
           }
           else {
-            instantaneousMAP = true;
+            instantaneous.MAP = true;
           }
 
           MAPsamplingNext = currentStatus.startRevolutions + ( configPage2.strokes == FOUR_STROKE ? 2 : 1); // One cycle is two revolutions for 4-stroke, one revolution for 2-stroke
@@ -316,7 +315,7 @@ void readMAP(void)
           MAPsamplingCount = 0;
         }
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousMAP = true;
+          instantaneous.MAP = true;
         }
 
         if( MAPADCerror == 0 )
@@ -330,7 +329,7 @@ void readMAP(void)
         MAPsamplingNext = 0;
         MAPsamplingRunningValue = 1023;
         MAPsamplingCount = 0;
-        instantaneousMAP = true;
+        instantaneous.MAP = true;
       }
 
       break;
@@ -342,7 +341,7 @@ void readMAP(void)
         if ( ignitionCount >= MAPsamplingNext ) {
           
           if ( MAPsamplingRunningValue > 0 && MAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneousMAP = false;
+            instantaneous.MAP = false;
 
             MAPlast = currentStatus.MAP;
             MAPlast_time = MAP_time;
@@ -351,7 +350,7 @@ void readMAP(void)
             currentStatus.MAP = fastMap10Bit( ldiv(MAPsamplingRunningValue, MAPsamplingCount).quot, configPage2.mapMin, configPage2.mapMax );
           }
           else {
-            instantaneousMAP = true;
+            instantaneous.MAP = true;
           }
           
           MAPsamplingNext = ignitionCount + 1;
@@ -359,7 +358,7 @@ void readMAP(void)
           MAPsamplingCount = 0;
         }
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousMAP = true;
+          instantaneous.MAP = true;
         }
 
         if( MAPADCerror == 0 )
@@ -374,18 +373,18 @@ void readMAP(void)
         MAPsamplingNext = 0;
         MAPsamplingRunningValue = 0;
         MAPsamplingCount = 0;
-        instantaneousMAP = true;
+        instantaneous.MAP = true;
       }
 
       break; 
 
     default: //Instantaneous MAP readings (Just in case)
-      instantaneousMAP = true;
+      instantaneous.MAP = true;
       break;
   }
 
   // Set MAP directly from mapADC if the result of an averaging method is not used
-  if (instantaneousMAP == true) {
+  if (instantaneous.MAP == true) {
     //Update the calculation times and last value. These are used by the MAP based Accel enrich
     MAPlast = currentStatus.MAP;
     MAPlast_time = MAP_time;
@@ -464,7 +463,7 @@ void readEMAP()
   switch (configPage2.mapSample) // Select EMAP sampling system
   {
     case 0: //Instantaneous MAP readings
-      instantaneousEMAP = true;
+      instantaneous.EMAP = true;
       break;
 
     // The comments for case 1 also apply to case 2 and 3.
@@ -478,12 +477,12 @@ void readEMAP()
 
           // This if-else makes sure we have data to average over and switchpoint has been reached, otherwise revert to instantaneous values
           if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 >= configPage2.mapSwitchPoint ) {
-            instantaneousEMAP = false;
+            instantaneous.EMAP = false;
 
             currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
           }
           else {
-            instantaneousEMAP = true;
+            instantaneous.EMAP = true;
           }
 
           // Reset average calculation variables for next cycle
@@ -492,7 +491,7 @@ void readEMAP()
         }
         // Instantaneously switch to instantaneous MAP if we dip below the switch point during a cycle
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousEMAP = true;
+          instantaneous.EMAP = true;
         }
 
         // Always collect (valid) values for averaging. It means we can switch to average as soon as the full cycle is concluded when switchpoint has been reached.
@@ -506,7 +505,7 @@ void readEMAP()
       else {
         EMAPsamplingRunningValue = 0;
         EMAPsamplingCount = 0;
-        instantaneousEMAP = true;
+        instantaneous.EMAP = true;
       }
 
       break;
@@ -518,19 +517,19 @@ void readEMAP()
         if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
 
           if ( EMAPsamplingRunningValue < 1023 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneousEMAP = false;
+            instantaneous.EMAP = false;
 
             currentStatus.EMAP = fastMap10Bit( EMAPsamplingRunningValue, configPage2.EMAPMin, configPage2.EMAPMax );
           }
           else {
-            instantaneousEMAP = true;
+            instantaneous.EMAP = true;
           }
 
           EMAPsamplingRunningValue = 1023; //Reset to a large invalid value (> VALID_MAP_MAX) so the next reading will always be lower
           EMAPsamplingCount = 0;
         }
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousEMAP = true;
+          instantaneous.EMAP = true;
         }
 
         if( EMAPADCerror == 0 )
@@ -543,7 +542,7 @@ void readEMAP()
       else {
         EMAPsamplingRunningValue = 1023;
         EMAPsamplingCount = 0;
-        instantaneousEMAP = true;
+        instantaneous.EMAP = true;
       }
 
       break;
@@ -555,19 +554,19 @@ void readEMAP()
         if ( ignitionCount >= MAPsamplingNext ) {
           
           if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneousEMAP = false;
+            instantaneous.EMAP = false;
 
             currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
           }
           else {
-            instantaneousEMAP = true;
+            instantaneous.EMAP = true;
           }
           
           EMAPsamplingRunningValue = 0;
           EMAPsamplingCount = 0;
         }
         else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneousEMAP = true;
+          instantaneous.EMAP = true;
         }
 
         if( EMAPADCerror == 0 )
@@ -581,18 +580,18 @@ void readEMAP()
       else {
         EMAPsamplingRunningValue = 0;
         EMAPsamplingCount = 0;
-        instantaneousEMAP = true;
+        instantaneous.EMAP = true;
       }
 
       break; 
 
     default: //Instantaneous MAP readings (Just in case)
-      instantaneousEMAP = true;
+      instantaneous.EMAP = true;
       break;
   }
 
   // Set MAP directly from mapADC if the result of an averaging method is not used
-  if (instantaneousEMAP == true) {
+  if (instantaneous.EMAP == true) {
 
     if( EMAPADCerror == 0 ) { // Valid ADC value, use it
       currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
