@@ -322,7 +322,7 @@ void readMAP(void)
         if( MAPADCerror == 0 )
         {
           if ( (unsigned long)currentStatus.mapADC < MAPsamplingRunningValue ) { MAPsamplingRunningValue = (unsigned long)currentStatus.mapADC; } // Update if the current reading is lower than the running minimum
-          if (MAPsamplingCount < 2) { MAPsamplingCount++; } // MAPsamplingCount only needs to reach 2, it's only checked for greater than 1. Prevents possibility of unlikely overflow.
+          MAPsamplingCount = 1; // MAPsamplingCount only needs to reach 1, it's only checked for being greater than 0. Prevents possibility of unlikely overflow.
         }
 
       }
