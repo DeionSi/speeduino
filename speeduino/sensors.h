@@ -13,7 +13,7 @@
 #define ADCFILTER_MAP_DEFAULT   20 //This is only used on Instantaneous MAP readings and is intentionally very weak to allow for faster response
 #define ADCFILTER_BARO_DEFAULT  64
 
-#define ADCFILTER_PSI_DEFAULT  150 //not currently configurable at runtime, used for misc pressure sensors, oil, fuel, etc.
+#define ADCFILTER_PSI_DEFAULT  20 //not currently configurable at runtime, used for misc pressure sensors, oil, fuel, etc.
 
 #define FILTER_FLEX_DEFAULT     75
 
