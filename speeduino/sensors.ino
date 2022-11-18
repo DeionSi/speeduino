@@ -181,6 +181,202 @@ Default MAP value for values over VALID_MAP_MAX is now the configured max for th
 
 //#include "unity.h"
 
+inline byte validateEMAPadc(int &EMAPadc)
+{
+  byte resultError = 0;
+
+  //Error checks
+  if (EMAPadc < VALID_MAP_MIN)
+  {
+    setError(ERR_EMAP_LOW);
+    resultError = ERR_EMAP_LOW;
+  }
+  else if (errorCount > 0) {
+    clearError(ERR_EMAP_LOW);
+  }
+
+  if (EMAPadc > VALID_MAP_MAX)
+  {
+    setError(ERR_EMAP_HIGH);
+    resultError = ERR_EMAP_HIGH;
+  }
+  else if (errorCount > 0) {
+    clearError(ERR_EMAP_HIGH);
+  }
+
+  return resultError;
+}
+
+// This function should/must only be called from readMAP()
+void readEMAP(bool applyFilter)
+{
+  // Comments are the same as in the readMAP function
+  
+  int tempReading;
+
+  #ifndef UNIT_TEST
+    tempReading = analogRead(pinEMAP);
+    tempReading = analogRead(pinEMAP);
+  #else
+    tempReading = unitTestEMAPinput;
+  #endif
+
+  byte EMAPADCerror = validateEMAPadc(tempReading);
+
+
+  if ( EMAPADCerror == 0 ) {
+    if ( applyFilter == true ) { currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC); }
+    else { currentStatus.EMAPADC = tempReading; }
+  }
+
+  /*******************************************/
+
+  switch (configPage2.mapSample)
+  {
+    case 0: //Instantaneous MAP readings
+      instantaneous.EMAP = true;
+      break;
+
+    case 1: //Average of a cycle
+      
+      if ( currentStatus.startRevolutions >= MAP_SAMPLING_COUNT_START ) {
+        
+        if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
+
+          if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 >= configPage2.mapSwitchPoint ) {
+            instantaneous.EMAP = false;
+
+            currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
+          }
+          else {
+            instantaneous.EMAP = true;
+          }
+
+          EMAPsamplingRunningValue = 0;
+          EMAPsamplingCount = 0;
+        }
+        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
+          instantaneous.EMAP = true;
+        }
+
+        if( EMAPADCerror == 0 )
+        {
+          EMAPsamplingRunningValue += currentStatus.EMAPADC;
+          EMAPsamplingCount++;
+          if (EMAPsamplingCount == UINT_MAX) { EMAPsamplingCount /= 2; EMAPsamplingRunningValue /= 2; }
+        }
+      }
+      else {
+        EMAPsamplingRunningValue = 0;
+        EMAPsamplingCount = 0;
+        instantaneous.EMAP = true;
+      }
+
+      break;
+
+    case 2: //Minimum reading in a cycle
+      
+      if ( currentStatus.startRevolutions >= MAP_SAMPLING_COUNT_START ) {
+        
+        if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
+
+          if ( EMAPsamplingRunningValue < 1023 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
+            instantaneous.EMAP = false;
+
+            currentStatus.EMAP = fastMap10Bit( EMAPsamplingRunningValue, configPage2.EMAPMin, configPage2.EMAPMax );
+          }
+          else {
+            instantaneous.EMAP = true;
+          }
+
+          EMAPsamplingRunningValue = 1023;
+          EMAPsamplingCount = 0;
+        }
+        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
+          instantaneous.EMAP = true;
+        }
+
+        if( EMAPADCerror == 0 )
+        {
+          if ( (unsigned long)currentStatus.EMAPADC < EMAPsamplingRunningValue ) { EMAPsamplingRunningValue = (unsigned long)currentStatus.EMAPADC; }
+          EMAPsamplingCount = 1;
+        }
+
+      }
+      else {
+        EMAPsamplingRunningValue = 1023;
+        EMAPsamplingCount = 0;
+        instantaneous.EMAP = true;
+      }
+
+      break;
+
+    case 3: //Average of an ignition event
+      // TODO: test based in engine protect status
+      if ( currentStatus.engineProtectStatus == 0 && ignitionCount >= MAP_SAMPLING_COUNT_START ) {
+
+        if ( ignitionCount >= MAPsamplingNext ) {
+          
+          if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
+            instantaneous.EMAP = false;
+
+            currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
+          }
+          else {
+            instantaneous.EMAP = true;
+          }
+          
+          EMAPsamplingRunningValue = 0;
+          EMAPsamplingCount = 0;
+        }
+        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
+          instantaneous.EMAP = true;
+        }
+
+        if( EMAPADCerror == 0 )
+        {
+          EMAPsamplingRunningValue += currentStatus.EMAPADC;
+          EMAPsamplingCount++;
+          if (EMAPsamplingCount == UINT_MAX) { EMAPsamplingCount /= 2; EMAPsamplingRunningValue /= 2; }
+        }
+
+      }
+      else {
+        EMAPsamplingRunningValue = 0;
+        EMAPsamplingCount = 0;
+        instantaneous.EMAP = true;
+      }
+
+      break; 
+
+    default: //Instantaneous MAP readings (Just in case)
+      instantaneous.EMAP = true;
+      break;
+  }
+
+  if (instantaneous.EMAP == true) {
+
+    if( EMAPADCerror == 0 ) {
+      currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
+    }
+    else if (EMAPADCerror == ERR_EMAP_LOW) {
+      currentStatus.EMAP = ERR_DEFAULT_EMAP_LOW;
+    }
+    else if (EMAPADCerror == ERR_EMAP_HIGH) {
+      currentStatus.EMAP = configPage2.EMAPMax;
+    }
+  }
+
+  if ( currentStatus.EMAP < 0 ) { currentStatus.EMAP = 0; }
+
+  //char debugMessage[200];
+  //snprintf(debugMessage, 200, "EMAPsamplingRunningValue %lu EMAPsamplingCount %u   ", EMAPsamplingRunningValue, EMAPsamplingCount);
+  //snprintf(debugMessage, 200, "mapADC %d validMAPadc %d  ", currentStatus.EMAPADC, validMAPadc);
+  //snprintf(debugMessage, 200, "EMAPsamplingRunningValue %lu EMAPsamplingCount %u mapADC %d MAPADCerror %u tempReading %d errorCount %u  ", EMAPsamplingRunningValue, EMAPsamplingCount, currentStatus.EMAPADC, MAPADCerror, tempReading, errorCount);
+  //UnityPrint(debugMessage);
+
+}
+
 inline byte validateMAPadc(int &MAPadc)
 {
   byte resultError = 0;
@@ -207,8 +403,13 @@ inline byte validateMAPadc(int &MAPadc)
   return resultError;
 }
 
-void readMAP(void)
+void readMAP(bool applyFilter)
 {
+  // readEMAP needs to be called first as readMAP updates MAPsamplingNext which is used by both
+  if(configPage6.useEMAP == true) {
+    readEMAP(applyFilter);
+  }
+
   // Read the sensor and set mapADC
 
   int tempReading;
@@ -228,7 +429,7 @@ void readMAP(void)
   
   if ( MAPADCerror == 0 ) {
     //During initialisation a call is made to get the baro reading from the MAP sensor. In this case, we can't apply the ADC filter
-    if ( initialisationComplete == true ) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); }
+    if ( applyFilter == true ) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); }
     else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
   }
 
@@ -410,217 +611,6 @@ void readMAP(void)
   //UnityPrint(debugMessage);
 }
 
-inline byte validateEMAPadc(int &EMAPadc)
-{
-  byte resultError = 0;
-
-  //Error checks
-  if (EMAPadc < VALID_MAP_MIN)
-  {
-    setError(ERR_EMAP_LOW);
-    resultError = ERR_EMAP_LOW;
-  }
-  else if (errorCount > 0) {
-    clearError(ERR_EMAP_LOW);
-  }
-
-  if (EMAPadc > VALID_MAP_MAX)
-  {
-    setError(ERR_EMAP_HIGH);
-    resultError = ERR_EMAP_HIGH;
-  }
-  else if (errorCount > 0) {
-    clearError(ERR_EMAP_HIGH);
-  }
-
-  return resultError;
-}
-
-void readEMAP()
-{
-  // Comments are the same as in the readMAP function
-  
-  int tempReading;
-
-  #ifndef UNIT_TEST
-    tempReading = analogRead(pinEMAP);
-    tempReading = analogRead(pinEMAP);
-  #else
-    tempReading = unitTestEMAPinput;
-  #endif
-
-  byte EMAPADCerror = validateEMAPadc(tempReading);
-
-
-  if ( EMAPADCerror == 0 ) {
-    // Set the starting value without any filter (called from readBaro)
-    if ( initialisationComplete == true ) { currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC); }
-    else { currentStatus.EMAPADC = tempReading; }
-  }
-
-  /*******************************************/
-
-  switch (configPage2.mapSample) // Select EMAP sampling system
-  {
-    case 0: //Instantaneous MAP readings
-      instantaneous.EMAP = true;
-      break;
-
-    // The comments for case 1 also apply to case 2 and 3.
-    case 1: //Average of a cycle
-      
-      // Only start collecting values after second revolution so we get exactly full cycles and startup has sort of stabilised. startRevolutions > 1 implies we have sync. Otherwise reset variables and use instantaneous values
-      if ( currentStatus.startRevolutions >= MAP_SAMPLING_COUNT_START ) {
-        
-        // Only try to calculate the average if one cycle has passed since the last calculation
-        if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
-
-          // This if-else makes sure we have data to average over and switchpoint has been reached, otherwise revert to instantaneous values
-          if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 >= configPage2.mapSwitchPoint ) {
-            instantaneous.EMAP = false;
-
-            currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
-          }
-          else {
-            instantaneous.EMAP = true;
-          }
-
-          // Reset average calculation variables for next cycle
-          EMAPsamplingRunningValue = 0;
-          EMAPsamplingCount = 0;
-        }
-        // Instantaneously switch to instantaneous MAP if we dip below the switch point during a cycle
-        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneous.EMAP = true;
-        }
-
-        // Always collect (valid) values for averaging. It means we can switch to average as soon as the full cycle is concluded when switchpoint has been reached.
-        if( EMAPADCerror == 0 )
-        {
-          EMAPsamplingRunningValue += currentStatus.EMAPADC; //Add the current reading onto the total
-          EMAPsamplingCount++;
-          if (EMAPsamplingCount == UINT_MAX) { EMAPsamplingCount /= 2; EMAPsamplingRunningValue /= 2; } // Prevent overflow if we for some reason read too many values, this should never happen
-        }
-      }
-      else {
-        EMAPsamplingRunningValue = 0;
-        EMAPsamplingCount = 0;
-        instantaneous.EMAP = true;
-      }
-
-      break;
-
-    case 2: //Minimum reading in a cycle
-      
-      if ( currentStatus.startRevolutions >= MAP_SAMPLING_COUNT_START ) {
-        
-        if ( currentStatus.startRevolutions >= MAPsamplingNext ) {
-
-          if ( EMAPsamplingRunningValue < 1023 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneous.EMAP = false;
-
-            currentStatus.EMAP = fastMap10Bit( EMAPsamplingRunningValue, configPage2.EMAPMin, configPage2.EMAPMax );
-          }
-          else {
-            instantaneous.EMAP = true;
-          }
-
-          EMAPsamplingRunningValue = 1023; //Reset to a large invalid value (> VALID_MAP_MAX) so the next reading will always be lower
-          EMAPsamplingCount = 0;
-        }
-        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneous.EMAP = true;
-        }
-
-        if( EMAPADCerror == 0 )
-        {
-          if ( (unsigned long)currentStatus.EMAPADC < EMAPsamplingRunningValue ) { EMAPsamplingRunningValue = (unsigned long)currentStatus.EMAPADC; } // Update if the current reading is lower than the running minimum
-          if (EMAPsamplingCount < 2) { EMAPsamplingCount++; } // EMAPsamplingCount only needs to reach 2, it's only checked for greater than 1. Prevents possibility of unlikely overflow.
-        }
-
-      }
-      else {
-        EMAPsamplingRunningValue = 1023;
-        EMAPsamplingCount = 0;
-        instantaneous.EMAP = true;
-      }
-
-      break;
-
-    case 3: //Average of an ignition event
-      // TODO: test based in engine protect status
-      if ( currentStatus.engineProtectStatus == 0 && ignitionCount >= MAP_SAMPLING_COUNT_START ) {
-
-        if ( ignitionCount >= MAPsamplingNext ) {
-          
-          if ( EMAPsamplingRunningValue > 0 && EMAPsamplingCount > 0 && currentStatus.RPMdiv100 > configPage2.mapSwitchPoint ) {
-            instantaneous.EMAP = false;
-
-            currentStatus.EMAP = fastMap10Bit( ldiv(EMAPsamplingRunningValue, EMAPsamplingCount).quot, configPage2.EMAPMin, configPage2.EMAPMax );
-          }
-          else {
-            instantaneous.EMAP = true;
-          }
-          
-          EMAPsamplingRunningValue = 0;
-          EMAPsamplingCount = 0;
-        }
-        else if (currentStatus.RPMdiv100 < configPage2.mapSwitchPoint) {
-          instantaneous.EMAP = true;
-        }
-
-        if( EMAPADCerror == 0 )
-        {
-          EMAPsamplingRunningValue += currentStatus.EMAPADC;
-          EMAPsamplingCount++;
-          if (EMAPsamplingCount == UINT_MAX) { EMAPsamplingCount /= 2; EMAPsamplingRunningValue /= 2; }
-        }
-
-      }
-      else {
-        EMAPsamplingRunningValue = 0;
-        EMAPsamplingCount = 0;
-        instantaneous.EMAP = true;
-      }
-
-      break; 
-
-    default: //Instantaneous MAP readings (Just in case)
-      instantaneous.EMAP = true;
-      break;
-  }
-
-  // Set MAP directly from mapADC if the result of an averaging method is not used
-  if (instantaneous.EMAP == true) {
-
-    if( EMAPADCerror == 0 ) { // Valid ADC value, use it
-      currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
-    }
-    else if (EMAPADCerror == ERR_EMAP_LOW) { // Too low ADC value, use the default LOW. Failed sensor or open circuit.
-      currentStatus.EMAP = ERR_DEFAULT_EMAP_LOW;
-    }
-    else if (EMAPADCerror == ERR_EMAP_HIGH) { // Too high ADC value, use the configured max value.
-      currentStatus.EMAP = configPage2.EMAPMax;
-    }
-  }
-
-  if ( currentStatus.EMAP < 0 ) { currentStatus.EMAP = 0; } // Pressure can never be negative
-
-  //char debugMessage[200];
-  //snprintf(debugMessage, 200, "EMAPsamplingRunningValue %lu EMAPsamplingCount %u   ", EMAPsamplingRunningValue, EMAPsamplingCount);
-  //snprintf(debugMessage, 200, "mapADC %d validMAPadc %d  ", currentStatus.EMAPADC, validMAPadc);
-  //snprintf(debugMessage, 200, "EMAPsamplingRunningValue %lu EMAPsamplingCount %u mapADC %d MAPADCerror %u tempReading %d errorCount %u  ", EMAPsamplingRunningValue, EMAPsamplingCount, currentStatus.EMAPADC, MAPADCerror, tempReading, errorCount);
-  //UnityPrint(debugMessage);
-}
-
-void readManifoldPressures() {
-  // readEMAP needs to be called first as readMAP updates MAPsamplingNext which is used by both
-  if(configPage6.useEMAP == true) {
-    readEMAP();
-  }
-  readMAP();
-}
-
 void readTPS(bool useFilter)
 {
   currentStatus.TPSlast = currentStatus.TPS;
@@ -697,7 +687,8 @@ void readIAT(void)
   currentStatus.IAT = table2D_getValue(&iatCalibrationTable, currentStatus.iatADC) - CALIBRATION_TEMPERATURE_OFFSET;
 }
 
-void readBaro(void)
+// When using MAP sensor for baro readings, readMAP needs to be called before to update currentStatus.MAP
+void readBaro(bool applyFilter)
 {
   if ( configPage6.useExtBaro != 0 )
   {
@@ -710,7 +701,7 @@ void readBaro(void)
       tempReading = analogRead(pinBaro);
     #endif
 
-    if(initialisationComplete == true) { currentStatus.baroADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); }//Very weak filter
+    if ( applyFilter == true ) { currentStatus.baroADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); }//Very weak filter
     else { currentStatus.baroADC = tempReading; } //Baro reading (No filter)
 
     currentStatus.baro = fastMap10Bit(currentStatus.baroADC, configPage2.baroMin, configPage2.baroMax); //Get the current MAP value
@@ -733,7 +724,6 @@ void readBaro(void)
     unsigned long timeToLastTooth = (micros() - toothLastToothTime);
     if((currentStatus.RPM == 0) && (timeToLastTooth > 1000000UL) && currentStatus.hasSync == false && BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) == false )
     {
-      readManifoldPressures(); //Get the current MAP value
       /* 
       * The highest sea-level pressure on Earth occurs in Siberia, where the Siberian High often attains a sea-level pressure above 105 kPa;
       * with record highs close to 108.5 kPa.

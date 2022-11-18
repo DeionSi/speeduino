@@ -364,7 +364,7 @@ void testSensorMAP_RunTestEMAP() {
   TEST_ASSERT_EQUAL_MESSAGE(checkForError, error, "hasError");
 }
 
-void testSensorMAP_RunTestData(byte testSettingNumber, byte testSettingData) {
+void testSensorMAP_RunTestData(byte testSettingNumber, byte testSettingData, bool applyFilter) {
   const byte testNameLength = 200;
   char testName[testNameLength];
 
@@ -375,13 +375,13 @@ void testSensorMAP_RunTestData(byte testSettingNumber, byte testSettingData) {
 
   if (sensorMAP_testsetting_current->whichSensor == testMAP) {
     unitTestMAPinput = sensorMAP_testdata_current->testInput;
-    readManifoldPressures();
+    readMAP(applyFilter);
     snprintf(testName, testNameLength, "MAP/setting%u/data%u/rev%lu/ign%u/", testSettingNumber, testSettingData, currentStatus.startRevolutions, ignitionCount);
     UnityDefaultTestRun(testSensorMAP_RunTestMAP, testName, __LINE__);
   }
   else if (sensorMAP_testsetting_current->whichSensor == testEMAP) {
     unitTestEMAPinput = sensorMAP_testdata_current->testInput;
-    readManifoldPressures();
+    readMAP(applyFilter);
     snprintf(testName, testNameLength, "EMAP/setting%u/data%u/rev%lu/ign%u/", testSettingNumber, testSettingData, currentStatus.startRevolutions, ignitionCount);
     UnityDefaultTestRun(testSensorMAP_RunTestEMAP, testName, __LINE__);
   }
@@ -401,10 +401,11 @@ void testSensorMAP_RunTestSettings(byte testSettingNumber) {
   }
   configPage2.mapSample = sensorMAP_testsetting_current->mapSample;
 
+  bool initComplete = false;
   for (int i = 0; i < sensorMAP_testsetting_current->testdataCount; i++) {
     sensorMAP_testdata_current = &sensorMAP_testsetting_current->testdata[i];
-    testSensorMAP_RunTestData(testSettingNumber, i);
-    initialisationComplete = true; // First call is with this off (call from readBaro)
+    testSensorMAP_RunTestData(testSettingNumber, i, initComplete);
+    initComplete = true; // First call reads sensor without filters (called from initialiseAll)
   }
   
 }
