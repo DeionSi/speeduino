@@ -240,7 +240,7 @@ void loop(void)
 
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
-    readMAP();  
+    readMAP(true);
     
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
@@ -417,7 +417,7 @@ void loop(void)
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ)) //Once per second)
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
-      readBaro(); //Infrequent baro readings are not an issue.
+      readBaro(true); //Infrequent baro readings are not an issue.
 
       if ( (configPage10.wmiEnabled > 0) && (configPage10.wmiIndicatorEnabled > 0) )
       {

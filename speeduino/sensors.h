@@ -75,7 +75,7 @@ extern uint32_t MAPsamplingNext;
  */
 #define ADC_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
 
-void readManifoldPressures(void);
+void readMAP(bool applyFilter);
 void initialiseADC(void);
 void readTPS(bool useFilter=true); //Allows the option to override the use of the filter
 void readO2_2(void);
@@ -92,7 +92,7 @@ void readCLT(bool useFilter=true); //Allows the option to override the use of th
 void readIAT(void);
 void readO2(void);
 void readBat(void);
-void readBaro(void);
+void readBaro(bool applyFilter);
 
 #if defined(ANALOG_ISR)
 volatile int AnChannel[15];

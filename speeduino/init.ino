@@ -415,7 +415,8 @@ void initialiseAll(void)
     toothHistoryIndex = 0;
     toothLastToothTime = 0;
 
-    readBaro();
+    readMAP(false);
+    readBaro(false);
     
     noInterrupts();
     initialiseTriggers();
