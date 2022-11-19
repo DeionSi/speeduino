@@ -75,7 +75,11 @@ extern uint32_t MAPsamplingNext;
  */
 #define ADC_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
 
-void readMAP(bool applyFilter);
+#ifdef UNIT_TEST
+inline void readMAP(bool applyFilter);
+#else
+inline void readMAP(bool applyFilter) __attribute__((always_inline));
+#endif
 void initialiseADC(void);
 void readTPS(bool useFilter=true); //Allows the option to override the use of the filter
 void readO2_2(void);

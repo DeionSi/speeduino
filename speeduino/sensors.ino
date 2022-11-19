@@ -181,7 +181,7 @@ Default MAP value for values over VALID_MAP_MAX is now the configured max for th
 
 //#include "unity.h"
 
-inline byte validateEMAPadc(int &EMAPadc)
+inline byte validateEMAPadc(uint16_t &EMAPadc)
 {
   byte resultError = 0;
 
@@ -212,7 +212,7 @@ void readEMAP(bool applyFilter)
 {
   // Comments are the same as in the readMAP function
   
-  int tempReading;
+  uint16_t tempReading;
 
   #ifndef UNIT_TEST
     tempReading = analogRead(pinEMAP);
@@ -377,7 +377,7 @@ void readEMAP(bool applyFilter)
 
 }
 
-inline byte validateMAPadc(int &MAPadc)
+inline byte validateMAPadc(uint16_t &MAPadc)
 {
   byte resultError = 0;
 
@@ -403,7 +403,7 @@ inline byte validateMAPadc(int &MAPadc)
   return resultError;
 }
 
-void readMAP(bool applyFilter)
+inline void readMAP(bool applyFilter)
 {
   // readEMAP needs to be called first as readMAP updates MAPsamplingNext which is used by both
   if(configPage6.useEMAP == true) {
@@ -412,7 +412,7 @@ void readMAP(bool applyFilter)
 
   // Read the sensor and set mapADC
 
-  int tempReading;
+  uint16_t tempReading;
 
   #ifndef UNIT_TEST
     #if defined(ANALOG_ISR_MAP)
