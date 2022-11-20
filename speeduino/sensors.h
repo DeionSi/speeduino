@@ -28,7 +28,7 @@
 
 #define TPS_READ_FREQUENCY  30 //ONLY VALID VALUES ARE 15 or 30!!!
 
-#define MAP_SAMPLING_COUNT_START 2 // The count at which sampling of MAP starts (revolutions or ignitions)
+#define MAP_SAMPLING_COUNT_START 2 // The count at which sampling of MAP starts (revolutions or ignitions) // Needs to be 1 or higher
 
 /*
 #if defined(CORE_AVR)
@@ -76,7 +76,7 @@ extern uint32_t MAPsamplingNext;
 #define ADC_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
 
 #ifdef UNIT_TEST
-inline void readMAP(bool applyFilter);
+void readMAP(bool applyFilter);
 #else
 inline void readMAP(bool applyFilter) __attribute__((always_inline));
 #endif
