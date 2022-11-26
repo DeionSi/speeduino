@@ -418,10 +418,10 @@ inline void readMAP(bool applyFilter)
     noInterrupts();
     tempReading = swfMAPlastInterval;
     interrupts();
-    // 0 kPa = max freq 159hz = 3144,65us between triggers (two per hertz)
-    // 101.6 kPa = min freq 80hz = 6250us between triggers (two per hertz)
-    // 102 kPa = 6262us
-    tempReading = map(tempReading, 6262, 3133, 0, 1023);
+    // 110 kPa = max freq 162,453hz = 6155,6us between triggers (one per hertz)
+    // 0 kPa = min freq 77,533hz = 12897,7us between triggers (one per hertz)
+    tempReading = (1000000UL*100) / tempReading; // Convert from us-between-triggers to frequency*100
+    tempReading = map(tempReading, 7753, 16245, 0, 1023); // From input is frequency*100
   #else
     tempReading = unitTestMAPinput;
   #endif

@@ -351,7 +351,7 @@ void initialiseAll(void)
     initialiseADC();
     initialiseProgrammableIO();
     
-    attachInterrupt(digitalPinToInterrupt(pinFlex), swfMAPpulse, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(pinFlex), swfMAPpulse, RISING);
 
     //Check whether the flex sensor is enabled and if so, attach an interrupt for it
     if(configPage2.flexEnabled > 0)
