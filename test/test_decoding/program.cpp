@@ -217,7 +217,7 @@ int32_t testParams::getResult() const {
       result = revolutionTime;
       break;
     case TOOTHANGLECORRECT:
-      result = triggerToothAngleIsCorrect;
+      result = BIT_CHECK(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
       break;
     case TOOTHANGLE_c:
       result = triggerToothAngle;

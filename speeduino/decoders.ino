@@ -308,7 +308,7 @@ uint32_t getStallTime() { //TODO: Untested
   // Calculate stall time based on current tooth gap length 
   uint32_t stallTime;
   noInterrupts();
-  if (triggerToothAngleIsCorrect == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
+  if ( BIT_CHECK(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT) == true && (currentStatus.hasSync || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) ) ) {
     unsigned long tempTriggerToothAngle = triggerToothAngle;
     interrupts();
     stallTime = tempTriggerToothAngle * 3333UL; // There are 3333 microseconds per degree at 50,005 revolutions per minute
