@@ -64,6 +64,8 @@ void loggerSecondaryISR(void);
 
 inline void resetDecoderState();
 
+inline uint32_t getStallTime();
+
 //All of the below are the 6 required functions for each decoder / pattern
 void triggerSetup_missingTooth(void);
 void triggerPri_missingTooth(void);
@@ -293,6 +295,29 @@ inline bool isDecoderStalled() {
   }
 
   return decoderStalled;
+}
+
+/**
+ * Resets most decoder variables
+ */
+inline void resetDecoderState() {
+  //Decoder output variables
+  toothLastToothTime = 0;
+  toothLastMinusOneToothTime = 0;
+  currentStatus.hasSync = false;
+  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+  currentStatus.startRevolutions = 0;
+  triggerToothAngle = 0;
+  BIT_CLEAR(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
+  revolutionTime = 0;
+  MAX_STALL_TIME = 500000UL; // Default 0,5 seconds
+
+  //Common decoder shared variables
+  toothOneTime = 0;
+  toothOneMinusOneTime = 0;
+  toothLastSecToothTime = 0;
+  toothSystemCount = 0;
+  secondaryToothCount = 0;
 }
 
 //Used for identifying long and short pulses on the 4G63 (And possibly other) trigger patterns

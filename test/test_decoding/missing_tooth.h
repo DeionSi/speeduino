@@ -1,0 +1,6 @@
+#ifndef TEST_DECODING_MISSING_TOOTH_H
+#define TEST_DECODING_MISSING_TOOTH_H
+
+void testDecodingMissingTooth();
+
+#endif /* TEST_DECODING_MISSING_TOOTH_H */
