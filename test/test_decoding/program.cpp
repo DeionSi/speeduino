@@ -108,10 +108,10 @@ void decodingTest::decodingSetup() {
   interrupts();
 }
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, testGroup* const a_tests, const testTooth* const a_tooth) :
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testGroup* const a_tests, const testTooth* const a_tooth) :
 type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
 
-timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, testGroup* const a_tests) :
+timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testGroup* const a_tests) :
 type(a_type), time(a_time), tests(a_tests) { };
 
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testTooth* const a_tooth) :

@@ -2,7 +2,7 @@
 #define TEST_DECODING_PROGRAM_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define testGroupEntry(testEntry) new testGroup { testEntry, countof(testEntry) }
+#define testGroupEntry(testEntry) const testGroup testEntry { testEntry##_tp, countof(testEntry##_tp) }
 
 //TODO: Rename structures to be more logical
 
@@ -73,7 +73,7 @@ class timedEvent {
   public:
     const timedEventType type;
     const uint32_t time;
-    testGroup* const tests = nullptr;
+    const testGroup* const tests = nullptr;
     const testTooth* const tooth = nullptr;
     static const testParams* wrapperTest;
     static timedEvent* wrapperEvent;
@@ -82,8 +82,8 @@ class timedEvent {
     void trigger(decodingTest* currentDecodingTest);
     void calculateExpected();
 
-    timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests, const testTooth* const tooth);
-    timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests);
+    timedEvent(const timedEventType type, const uint32_t time, const testGroup* const tests, const testTooth* const tooth);
+    timedEvent(const timedEventType type, const uint32_t time, const testGroup* const tests);
     timedEvent(const timedEventType type, const uint32_t time, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time);
 };
