@@ -14,7 +14,6 @@ struct testTooth {
 };
 
 struct testResults {
-  int32_t value;
   uint32_t retrievedAt;
 };
 

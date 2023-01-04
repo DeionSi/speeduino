@@ -200,7 +200,6 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
 
     for (int i = 0; i < tests->testCount; i++) {
       tests->results[i].retrievedAt = micros_injection;
-      tests->results[i].value = tests->tests[i].getResult();
     }
 
     if (individual_test_reports) {
@@ -260,54 +259,6 @@ void timedEvent::calculateExpected() {
 void timedEvent::preTestsCommands() {
   currentStatus.RPM = getRPM();
   doCrankSpeedCalcs();
-}
-
-int32_t testParams::getResult() const {
-  int32_t result = 0;
-
-  switch(type) {
-    case CRANKANGLE_c:
-      result = getCrankAngle();
-      break;
-    case RPM:
-    case RPM_c_deltaPerThousand:
-      result = getRPM();
-      break;
-    case SYNC:
-      result = currentStatus.hasSync;
-      break;
-    case HALFSYNC:
-      result = BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC);
-      break;
-    case SYNCLOSSCOUNT:
-      result = currentStatus.syncLossCounter;
-      break;
-    case REVCOUNT_c:
-      result = currentStatus.startRevolutions;
-      break;
-    case REVTIME_c:
-      result = revolutionTime;
-      break;
-    case TOOTHANGLECORRECT:
-      result = BIT_CHECK(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
-      break;
-    case TOOTHANGLE_c:
-      result = triggerToothAngle;
-      break;
-    case LASTTOOTHTIME_c:
-      result = toothLastToothTime;
-      break;
-    case LASTTOOTHTIMEMINUSONE_c:
-      result = toothLastMinusOneToothTime;
-      break;
-    case STALLTIME_c:
-      // result = getStallTime(); //TODO: how to calculate
-      break;
-    default:
-      break;
-  }
-
-  return result;
 }
 
 void decodingTest::stallCleanup() {
@@ -376,6 +327,7 @@ void testParams::runTestWrapper() {
 
 void testParams::runTest(testResults* result) const {
 
+  int32_t actual = 0;
   int32_t expectedCalculated = expected;
   uint16_t deltaCalculated = delta;
 
@@ -389,22 +341,59 @@ void testParams::runTest(testResults* result) const {
         while (expectedCalculated >= CRANK_ANGLE_MAX) { expectedCalculated -= CRANK_ANGLE_MAX; }
         while (expectedCalculated < 0) { expectedCalculated += CRANK_ANGLE_MAX; }
       }
+      actual = getCrankAngle();
       break;
-    case LASTTOOTHTIME_c:
-      expectedCalculated = testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+
+    case RPM:
+      actual = getRPM();
       break;
-    case LASTTOOTHTIMEMINUSONE_c:
-      expectedCalculated = testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+
+    case RPM_c_deltaPerThousand:
+      expectedCalculated = testLastRPM;
+      actual = getRPM();
       break;
-    case REVTIME_c:
-      expectedCalculated = testRevolutionTime;
+
+    case SYNC:
+      actual = currentStatus.hasSync;
       break;
+
+    case HALFSYNC:
+      actual = BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+      break;
+
+    case SYNCLOSSCOUNT:
+      actual = currentStatus.syncLossCounter;
+      break;
+
     case REVCOUNT_c:
       expectedCalculated = testRevolutionCount;
+      actual = currentStatus.startRevolutions;
       break;
+
+    case REVTIME_c:
+      expectedCalculated = testRevolutionTime;
+      actual = revolutionTime;
+      break;
+
+    case TOOTHANGLECORRECT:
+      actual = BIT_CHECK(decoderState, BIT_DECODER_TOOTH_ANG_CORRECT);
+      break;
+
     case TOOTHANGLE_c:
       expectedCalculated = testLastToothDegrees;
+      actual = triggerToothAngle;
       break;
+
+    case LASTTOOTHTIME_c:
+      expectedCalculated = testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+      actual = toothLastToothTime;
+      break;
+
+    case LASTTOOTHTIMEMINUSONE_c:
+      expectedCalculated = testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+      actual = toothLastMinusOneToothTime;
+      break;
+      
     case STALLTIME_c:
       /* TODO: how to calculate
         if (testHasSyncOrHalfsync == true) {
@@ -415,9 +404,7 @@ void testParams::runTest(testResults* result) const {
       else {
         expectedCalculated = MAX_STALL_TIME; //TODO: Change this to calculate max stall time from maximum tooth length
       } */
-      break;
-    case RPM_c_deltaPerThousand:
-      expectedCalculated = testLastRPM;
+      // result = getStallTime(); //TODO: how to calculate
       break;
     default:
       break;
@@ -426,16 +413,16 @@ void testParams::runTest(testResults* result) const {
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
     char testMessage[testMessageLength];
-    snprintf(testMessage, testMessageLength, "result %ld expected %ld delta %u ", result->value, expectedCalculated, deltaCalculated);
+    snprintf(testMessage, testMessageLength, "actual %ld expected %ld delta %u ", actual, expectedCalculated, deltaCalculated);
     UnityPrint(testMessage);
     for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
   }
 
   if (deltaCalculated == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, result->value, name());
+    TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, actual, name());
   }
   else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(deltaCalculated, expectedCalculated, result->value, name());
+    TEST_ASSERT_INT_WITHIN_MESSAGE(deltaCalculated, expectedCalculated, actual, name());
   }
 }
 
