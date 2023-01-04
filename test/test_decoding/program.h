@@ -26,7 +26,7 @@ class testParams {
       LASTTOOTHTIME_c,
       LASTTOOTHTIMEMINUSONE_c,
       RPM,
-      RPM_c_deltaPerThousand,
+      RPM_c,
       STALLTIME_c,
       CRANKANGLE_c,
       ENUMEND,
@@ -36,7 +36,6 @@ class testParams {
     const timedTestType type;
     static const char* const friendlyNames[];
     const int32_t expected;
-    const uint16_t delta = 0;
 
   public:
 

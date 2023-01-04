@@ -40,14 +40,14 @@ const testParams mt_test0_sync_tp[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 0 },
-  { testParams::RPM, 5000, 20 },
+  { testParams::RPM, 5000 },
   { testParams::REVCOUNT_c, 0 },
-  { testParams::REVTIME_c, 0, 52 },
+  { testParams::REVTIME_c, 0 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
-  { testParams::LASTTOOTHTIME_c, 0, 4 },
-  { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::CRANKANGLE_c, 0, 1 },
+  { testParams::LASTTOOTHTIME_c, 0 },
+  { testParams::LASTTOOTHTIMEMINUSONE_c, 0 },
+  { testParams::CRANKANGLE_c, 0 },
 };
 testGroupEntry(mt_test0_sync);
 
@@ -55,14 +55,14 @@ const testParams mt_test0_syncloss1_tp[] = {
   { testParams::SYNC, 1 },
   { testParams::HALFSYNC, 0 },
   { testParams::SYNCLOSSCOUNT, 1 },
-  { testParams::RPM, 5000, 20 },
+  { testParams::RPM, 5000 },
   { testParams::REVCOUNT_c, 0 },
-  { testParams::REVTIME_c, 0, 52 },
+  { testParams::REVTIME_c, 0 },
   { testParams::TOOTHANGLECORRECT, 1 },
   { testParams::TOOTHANGLE_c, 0 },
-  { testParams::LASTTOOTHTIME_c, 0, 4 },
-  { testParams::LASTTOOTHTIMEMINUSONE_c, 0, 4 },
-  { testParams::CRANKANGLE_c, 0, 1 },
+  { testParams::LASTTOOTHTIME_c, 0 },
+  { testParams::LASTTOOTHTIMEMINUSONE_c, 0 },
+  { testParams::CRANKANGLE_c, 0 },
 };
 testGroupEntry(mt_test0_syncloss1);
 

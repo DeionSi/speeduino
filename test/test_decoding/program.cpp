@@ -54,7 +54,7 @@
 
 // Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event
-const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
+const bool individual_test_reports_debug = true; // Shows expected/result for each individual test
 
 // Test output variables
 const byte unityMessageLength = 100;
@@ -121,7 +121,6 @@ timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time) :
 type(a_type), time(a_time) { };
 
 testParams::testParams(const timedTestType a_type, const int32_t a_expected) : type(a_type), expected(a_expected) {};
-testParams::testParams(const timedTestType a_type, const int32_t a_expected, const uint16_t a_delta) : type(a_type), expected(a_expected), delta(a_delta) {};
 
 const char* const testParams::friendlyNames[] = {
   [SYNC] = "Sync",
@@ -134,7 +133,7 @@ const char* const testParams::friendlyNames[] = {
   [LASTTOOTHTIME_c] = "Last tooth time",
   [LASTTOOTHTIMEMINUSONE_c] = "Last tooth time minus one",
   [RPM] = "RPM",
-  [RPM_c_deltaPerThousand] = "Calculated RPM",
+  [RPM_c] = "Calculated RPM",
   [STALLTIME_c] = "Stall time",
   [CRANKANGLE_c] = "Crank angle",
   [ENUMEND] = "enum end / invalid",
@@ -323,7 +322,6 @@ void testParams::runTest() const {
 
   int32_t actual = 0;
   int32_t expectedCalculated = expected;
-  uint16_t deltaCalculated = delta;
 
   // Calculate our crank angle compare angle based on how much time passed until test
   switch(type) {
@@ -342,7 +340,7 @@ void testParams::runTest() const {
       actual = getRPM();
       break;
 
-    case RPM_c_deltaPerThousand:
+    case RPM_c:
       expectedCalculated = testLastRPM;
       actual = getRPM();
       break;
@@ -379,12 +377,12 @@ void testParams::runTest() const {
       break;
 
     case LASTTOOTHTIME_c:
-      expectedCalculated = testLastToothTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+      expectedCalculated = testLastToothTime;
       actual = toothLastToothTime;
       break;
 
     case LASTTOOTHTIMEMINUSONE_c:
-      expectedCalculated = testLastToothMinusOneTime + 4; // Add 4 because trigger function is called after this time was saved and micros() rounds to 4
+      expectedCalculated = testLastToothMinusOneTime;
       actual = toothLastMinusOneToothTime;
       break;
       
@@ -407,17 +405,12 @@ void testParams::runTest() const {
   if (individual_test_reports_debug) {
     const char testMessageLength = 40;
     char testMessage[testMessageLength];
-    snprintf(testMessage, testMessageLength, "actual %ld expected %ld delta %u ", actual, expectedCalculated, deltaCalculated);
+    snprintf(testMessage, testMessageLength, "actual %ld expected %ld ", actual, expectedCalculated);
     UnityPrint(testMessage);
     for (int i = strlen(testMessage); i < testMessageLength+1; i++) { UnityPrint(" "); } //Padding
   }
 
-  if (deltaCalculated == 0) {
-    TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, actual, name());
-  }
-  else {
-    TEST_ASSERT_INT_WITHIN_MESSAGE(deltaCalculated, expectedCalculated, actual, name());
-  }
+  TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, actual, name());
 }
 
 //************ Part 4: Cleanup / other ************
