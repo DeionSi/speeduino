@@ -73,7 +73,7 @@ class timedEvent {
 
     void preTestsCommands();
     bool hasSyncOrHalfsync();
-    void runTests(uint32_t testStartTime);
+    void runTests();
     static void runTestsWrapper();
 
   public:
@@ -109,8 +109,6 @@ class decodingTest {
     void compareResults();
 
   public:
-    uint32_t startTime = 0;
-    
     void execute();
     void showTriggerlog();
     void stallCleanup();

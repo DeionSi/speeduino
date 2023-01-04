@@ -427,7 +427,7 @@ void triggerSetup_missingTooth(void)
 
 void triggerPri_missingTooth(void)
 {
-   curTime = micros();
+   curTime = MICROS_OR_TEST_INJECTION;
    curGap = curTime - toothLastToothTime;
    if ( curGap >= triggerFilterTime ) //Pulses should never be less than triggerFilterTime, so if they are it means a false trigger. (A 36-1 wheel at 8000pm will have triggers approx. every 200uS)
    {
@@ -543,7 +543,7 @@ void triggerPri_missingTooth(void)
 
 void triggerSec_missingTooth(void)
 {
-  curTime2 = micros();
+  curTime2 = MICROS_OR_TEST_INJECTION;
   curGap2 = curTime2 - toothLastSecToothTime;
 
   //Safety check for initial startup
@@ -632,7 +632,7 @@ int getCrankAngle_missingTooth(void)
     //Sequential check (simply sets whether we're on the first or 2nd revolution of the cycle)
     if ( (tempRevolutionOne == true) && (configPage4.TrigSpeed == CRANK_SPEED) ) { crankAngle += 360; }
 
-    lastCrankAngleCalc = micros();
+    lastCrankAngleCalc = MICROS_OR_TEST_INJECTION;
     elapsedTime = (lastCrankAngleCalc - tempToothLastToothTime);
     crankAngle += timeToAngle(elapsedTime, CRANKMATH_METHOD_INTERVAL_REV);
 

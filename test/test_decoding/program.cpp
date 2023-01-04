@@ -48,6 +48,10 @@
 #include "init.h"
 #include "program.h"
 
+#ifndef UNIT_TEST
+  extern unsigned long micros_safe_injection; // Hack so that vscode sees the variable
+#endif
+
 // Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event
 const bool individual_test_reports_debug = true; // Shows delta/expected/result for each individual test
@@ -144,7 +148,6 @@ const char* testParams::name() const {
 //************ Part 2: Gathering the results ************
 
 void decodingTest::gatherResults() {
-  startTime = micros();
   for (int i = 0; i < eventCount; i++) {
     events[i].trigger(this);
   }
@@ -153,7 +156,7 @@ void decodingTest::gatherResults() {
 void timedEvent::trigger(decodingTest* currentDecodingTest) {
   // Delay until it's time to trigger
   if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
-    uint32_t delayUntil = time + currentDecodingTest->startTime;
+    uint32_t delayUntil = time;
     while(micros() < delayUntil) {};
   }
 
@@ -313,12 +316,12 @@ void timedEvent::run(decodingTest* currentDecodingTest) {
   if (tests != nullptr) {
 
     if (individual_test_reports) {
-      runTests(currentDecodingTest->startTime);
+      runTests();
     }
     else {
       wrapperEvent = this;
       wrapperDecodingTest = currentDecodingTest;
-      snprintf(unityMessage, unityMessageLength, "%lu triggered at %lu", time, triggeredAt - currentDecodingTest->startTime);
+      snprintf(unityMessage, unityMessageLength, "%lu", time);
       UnityDefaultTestRun(runTestsWrapper, unityMessage, __LINE__);
     }
     
@@ -327,10 +330,10 @@ void timedEvent::run(decodingTest* currentDecodingTest) {
 
 // This is needed because Unity tests cannot call non-static member functions or use arguments
 void timedEvent::runTestsWrapper() {
-  timedEvent::wrapperEvent->runTests(timedEvent::wrapperDecodingTest->startTime);
+  timedEvent::wrapperEvent->runTests();
 }
 
-void timedEvent::runTests(uint32_t testStartTime) {
+void timedEvent::runTests() {
 
   testHasSyncOrHalfsync = hasSyncOrHalfsync();
 
@@ -341,7 +344,7 @@ void timedEvent::runTests(uint32_t testStartTime) {
         wrapperTest = &tests->tests[i];
         wrapperResult = &tests->results[i];
 
-        snprintf(unityMessage, unityMessageLength, "%lu retrieved at %lu '%s'", time, tests->results[i].retrievedAt - testStartTime, tests->tests[i].name() );
+        snprintf(unityMessage, unityMessageLength, "%lu '%s'", time, tests->tests[i].name() );
         UnityDefaultTestRun(tests->tests[i].runTestWrapper, unityMessage, __LINE__);
       }
       else {
@@ -468,7 +471,7 @@ void decodingTest::showTriggerlog() {
     uint32_t displayTime = events[i].triggeredAt - lastTriggerTime;
     lastTriggerTime = events[i].triggeredAt;
 
-    snprintf(unityMessage, unityMessageLength, "time %lu timefromstart %lu interval %lu ", events[i].triggeredAt, events[i].triggeredAt - startTime, displayTime);
+    snprintf(unityMessage, unityMessageLength, "time %lu interval %lu ", events[i].triggeredAt, displayTime);
     UnityPrint(unityMessage);
     UNITY_PRINT_EOL();
   }
