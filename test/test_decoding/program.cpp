@@ -216,11 +216,6 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
 
 }
 
-void timedEvent::preTestsCommands() {
-  currentStatus.RPM = getRPM();
-  doCrankSpeedCalcs();
-}
-
 void timedEvent::calculateExpected() {
   if (type == timedEvent::PRITRIG && tooth != nullptr) {
     // Calculate expected tooth times, tooth one times and revolution count
@@ -260,6 +255,11 @@ void timedEvent::calculateExpected() {
     decodingTest::resetTest();
   }
 
+}
+
+void timedEvent::preTestsCommands() {
+  currentStatus.RPM = getRPM();
+  doCrankSpeedCalcs();
 }
 
 int32_t testParams::getResult() const {
