@@ -2,7 +2,7 @@
 #define TEST_DECODING_PROGRAM_H
 
 #define countof(arr) sizeof(arr) / sizeof(arr[0])
-#define testGroupEntry(testEntry) new testGroup { testEntry, countof(testEntry), new testResults[countof(testEntry)] }
+#define testGroupEntry(testEntry) new testGroup { testEntry, countof(testEntry) }
 
 //TODO: Rename structures to be more logical
 
@@ -11,10 +11,6 @@ class decodingTest;
 struct testTooth {
   uint16_t angle;
   uint16_t degrees;
-};
-
-struct testResults {
-  uint32_t retrievedAt;
 };
 
 class testParams {
@@ -46,7 +42,7 @@ class testParams {
 
     int32_t getResult() const;
     bool hasSyncOrHalfsync() const;
-    void runTest(testResults* result) const;
+    void runTest() const;
     static void runTestWrapper();
     const char* name() const;
     testParams(const timedTestType, const int32_t);
@@ -57,7 +53,6 @@ class testParams {
 struct testGroup {
   const testParams* const tests;
   const byte testCount;
-  testResults* const results;
 };
 
 class timedEvent {
@@ -80,7 +75,6 @@ class timedEvent {
     const uint32_t time;
     testGroup* const tests = nullptr;
     const testTooth* const tooth = nullptr;
-    static testResults* wrapperResult;
     static const testParams* wrapperTest;
     static timedEvent* wrapperEvent;
     static decodingTest* wrapperDecodingTest;

@@ -147,7 +147,6 @@ const char* testParams::name() const {
 //************ Part 2: Running tests ************
 
 // For keeping track of current state
-testResults* timedEvent::wrapperResult;
 const testParams* timedEvent::wrapperTest;
 timedEvent* timedEvent::wrapperEvent;
 decodingTest* timedEvent::wrapperDecodingTest;
@@ -197,10 +196,6 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
   // Get run tests
   if (tests != nullptr) {
     preTestsCommands();
-
-    for (int i = 0; i < tests->testCount; i++) {
-      tests->results[i].retrievedAt = micros_injection;
-    }
 
     if (individual_test_reports) {
       runTests();
@@ -285,13 +280,12 @@ void timedEvent::runTests() {
 
       if (individual_test_reports) {
         wrapperTest = &tests->tests[i];
-        wrapperResult = &tests->results[i];
 
         snprintf(unityMessage, unityMessageLength, "%lu '%s'", time, tests->tests[i].name() );
         UnityDefaultTestRun(tests->tests[i].runTestWrapper, unityMessage, __LINE__);
       }
       else {
-        tests->tests[i].runTest(&tests->results[i]);
+        tests->tests[i].runTest();
       }
 
     }
@@ -322,10 +316,10 @@ bool testParams::hasSyncOrHalfsync() const {
 
 // This is needed because Unity tests cannot call non-static member functions or use arguments
 void testParams::runTestWrapper() {
-  timedEvent::wrapperTest->runTest(timedEvent::wrapperResult);
+  timedEvent::wrapperTest->runTest();
 }
 
-void testParams::runTest(testResults* result) const {
+void testParams::runTest() const {
 
   int32_t actual = 0;
   int32_t expectedCalculated = expected;
@@ -335,7 +329,7 @@ void testParams::runTest(testResults* result) const {
   switch(type) {
     case CRANKANGLE_c:
       if (testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
-        uint32_t delay = result->retrievedAt - lastPRITRIGevent->time;
+        uint32_t delay = micros_injection - lastPRITRIGevent->time;
         expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / testLastUsPerDegree);
         expectedCalculated += configPage4.triggerAngle;
         while (expectedCalculated >= CRANK_ANGLE_MAX) { expectedCalculated -= CRANK_ANGLE_MAX; }
