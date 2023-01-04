@@ -49,7 +49,7 @@
 #include "program.h"
 
 #ifndef UNIT_TEST
-  extern unsigned long micros_safe_injection; // Hack so that vscode sees the variable
+  extern unsigned long micros_injection; // Hack so that vscode sees the variable
 #endif
 
 // Output settings
@@ -84,8 +84,8 @@ bool decodingTest::verifyEventOrder() const {
   uint32_t lastEventTime = 0;
   for (int i = 0; i < eventCount; i++) {
     if (events[i].time < lastEventTime) {
-      snprintf(unityMessage, unityMessageLength, "ERROR: Out of sequence event %lu i %d", events[i].time, i);
-      UnityMessage(unityMessage, __LINE__);
+      snprintf(unityMessage, unityMessageLength, "Out of sequence event %lu i %d", events[i].time, i);
+      TEST_FAIL_MESSAGE(unityMessage);
       result = false;
     }
     lastEventTime = events[i].time;
@@ -154,11 +154,8 @@ void decodingTest::gatherResults() {
 }
 
 void timedEvent::trigger(decodingTest* currentDecodingTest) {
-  // Delay until it's time to trigger
-  if (time < UINT32_MAX) { // UINT32_MAX Entries are not delayed
-    uint32_t delayUntil = time;
-    while(micros() < delayUntil) {};
-  }
+
+  micros_injection = time;
 
   // Execute any actions
   switch(type) {
@@ -180,7 +177,7 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
   if (tests != nullptr) {
     preTestsCommands();
     for (int i = 0; i < tests->testCount; i++) {
-      tests->results[i].retrievedAt = micros();
+      tests->results[i].retrievedAt = micros_injection;
       tests->results[i].value = tests->tests[i].getResult();
     }
   }
