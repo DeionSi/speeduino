@@ -73,7 +73,6 @@ void decodingTest::execute() {
   if ( verifyEventOrder() ) { // Part 1
     decodingSetup(); // Part 1
     gatherResults(); // Part 2
-    compareResults(); // Part 3
     resetTest(); // Part 4
     stallCleanup(); // Reset speeduino
   }
@@ -145,7 +144,26 @@ const char* testParams::name() const {
   return friendlyNames[this->type];
 }
 
-//************ Part 2: Gathering the results ************
+//************ Part 2: Running tests ************
+
+// For keeping track of current state
+testResults* timedEvent::wrapperResult;
+const testParams* timedEvent::wrapperTest;
+timedEvent* timedEvent::wrapperEvent;
+decodingTest* timedEvent::wrapperDecodingTest;
+
+// Used to keep track of variables for calculated fields
+timedEvent* lastPRITRIGevent;
+uint32_t testLastToothTime;
+uint32_t testLastToothMinusOneTime;
+float testLastUsPerDegree;
+uint16_t testLastToothDegrees;
+uint16_t testLastRPM;
+uint32_t testToothOneTime;
+uint32_t testToothOneMinusOneTime;
+uint32_t testRevolutionTime;
+byte testRevolutionCount;
+bool testHasSyncOrHalfsync;
 
 void decodingTest::gatherResults() {
   for (int i = 0; i < eventCount; i++) {
@@ -173,19 +191,75 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
     
   }
 
-  // Get data from tests
+  // Calculate expected values
+  calculateExpected();
+
+  // Get run tests
   if (tests != nullptr) {
     preTestsCommands();
+
     for (int i = 0; i < tests->testCount; i++) {
       tests->results[i].retrievedAt = micros_injection;
       tests->results[i].value = tests->tests[i].getResult();
     }
+
+    if (individual_test_reports) {
+      runTests();
+    }
+    else {
+      wrapperEvent = this;
+      wrapperDecodingTest = currentDecodingTest;
+      snprintf(unityMessage, unityMessageLength, "%lu", time);
+      UnityDefaultTestRun(runTestsWrapper, unityMessage, __LINE__);
+    }
   }
+
 }
 
 void timedEvent::preTestsCommands() {
   currentStatus.RPM = getRPM();
   doCrankSpeedCalcs();
+}
+
+void timedEvent::calculateExpected() {
+  if (type == timedEvent::PRITRIG && tooth != nullptr) {
+    // Calculate expected tooth times, tooth one times and revolution count
+    if (tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
+      testToothOneMinusOneTime = testToothOneTime;
+      testToothOneTime = time;
+
+      if (testToothOneMinusOneTime > 0) {
+        testRevolutionCount++;
+      }
+    }
+    
+    testLastToothMinusOneTime = testLastToothTime;
+    testLastToothTime = time;
+    
+    // Calculate expected revolution time and RPM
+    if (testToothOneMinusOneTime > 0 && testLastRPM > currentStatus.crankRPM) {
+      testRevolutionTime = testToothOneTime - testToothOneMinusOneTime;
+    }
+    else if (lastPRITRIGevent != nullptr && testLastToothMinusOneTime > 0) {
+      uint32_t testTriggerToothAngleTime = testLastToothTime - testLastToothMinusOneTime;
+      testRevolutionTime = testTriggerToothAngleTime * (CRANK_ANGLE_MAX / lastPRITRIGevent->tooth->degrees);
+    }
+    testLastRPM = 60000000 / testRevolutionTime;
+
+    // Calculate expected micros per degree and last tooth degrees
+    if (lastPRITRIGevent != nullptr) {
+      uint32_t interval = time - lastPRITRIGevent->time;
+      testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
+
+      testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
+    }
+
+    lastPRITRIGevent = this;
+  }
+  else if (type == timedEvent::STALL) {
+    decodingTest::resetTest();
+  }
+
 }
 
 int32_t testParams::getResult() const {
@@ -244,84 +318,7 @@ void decodingTest::stallCleanup() {
 
 //************ Part 3: Running the tests (comparing results and giving output) ************
 
-// For keeping track of current state
-testResults* timedEvent::wrapperResult;
-const testParams* timedEvent::wrapperTest;
-timedEvent* timedEvent::wrapperEvent;
-decodingTest* timedEvent::wrapperDecodingTest;
 
-// Used to keep track of variables for calculated fields
-timedEvent* lastPRITRIGevent;
-uint32_t testLastToothTime;
-uint32_t testLastToothMinusOneTime;
-float testLastUsPerDegree;
-uint16_t testLastToothDegrees;
-uint16_t testLastRPM;
-uint32_t testToothOneTime;
-uint32_t testToothOneMinusOneTime;
-uint32_t testRevolutionTime;
-byte testRevolutionCount;
-bool testHasSyncOrHalfsync;
-
-void decodingTest::compareResults() {
-  for (int i = 0; i < eventCount; i++) {
-    events[i].run(this);
-  }
-}
-
-void timedEvent::run(decodingTest* currentDecodingTest) {
-  if (type == timedEvent::PRITRIG && tooth != nullptr) {
-    // Calculate expected tooth times, tooth one times and revolution count
-    if (tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
-      testToothOneMinusOneTime = testToothOneTime;
-      testToothOneTime = time;
-
-      if (testToothOneMinusOneTime > 0) {
-        testRevolutionCount++;
-      }
-    }
-    
-    testLastToothMinusOneTime = testLastToothTime;
-    testLastToothTime = time;
-    
-    // Calculate expected revolution time and RPM
-    if (testToothOneMinusOneTime > 0 && testLastRPM > currentStatus.crankRPM) {
-      testRevolutionTime = testToothOneTime - testToothOneMinusOneTime;
-    }
-    else if (lastPRITRIGevent != nullptr && testLastToothMinusOneTime > 0) {
-      uint32_t testTriggerToothAngleTime = testLastToothTime - testLastToothMinusOneTime;
-      testRevolutionTime = testTriggerToothAngleTime * (CRANK_ANGLE_MAX / lastPRITRIGevent->tooth->degrees);
-    }
-    testLastRPM = 60000000 / testRevolutionTime;
-
-    // Calculate expected micros per degree and last tooth degrees
-    if (lastPRITRIGevent != nullptr) {
-      uint32_t interval = time - lastPRITRIGevent->time;
-      testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
-
-      testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
-    }
-
-    lastPRITRIGevent = this;
-  }
-  else if (type == timedEvent::STALL) {
-    decodingTest::resetTest();
-  }
-
-  if (tests != nullptr) {
-
-    if (individual_test_reports) {
-      runTests();
-    }
-    else {
-      wrapperEvent = this;
-      wrapperDecodingTest = currentDecodingTest;
-      snprintf(unityMessage, unityMessageLength, "%lu", time);
-      UnityDefaultTestRun(runTestsWrapper, unityMessage, __LINE__);
-    }
-    
-  }
-}
 
 // This is needed because Unity tests cannot call non-static member functions or use arguments
 void timedEvent::runTestsWrapper() {

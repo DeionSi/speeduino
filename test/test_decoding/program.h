@@ -87,7 +87,7 @@ class timedEvent {
     static decodingTest* wrapperDecodingTest;
 
     void trigger(decodingTest* currentDecodingTest);
-    void run(decodingTest* currentDecodingTest);
+    void calculateExpected();
 
     timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests, const testTooth* const tooth);
     timedEvent(const timedEventType type, const uint32_t time, testGroup* const tests);
@@ -105,7 +105,6 @@ class decodingTest {
     void gatherResults();
     bool verifyEventOrder() const;
     void decodingSetup();
-    void compareResults();
 
   public:
     void execute();
