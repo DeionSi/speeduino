@@ -81,7 +81,6 @@ class timedEvent {
     const uint32_t time;
     testGroup* const tests = nullptr;
     const testTooth* const tooth = nullptr;
-    uint32_t triggeredAt = 0;
     static testResults* wrapperResult;
     static const testParams* wrapperTest;
     static timedEvent* wrapperEvent;

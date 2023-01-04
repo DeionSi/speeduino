@@ -160,8 +160,6 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
     while(micros() < delayUntil) {};
   }
 
-  triggeredAt = micros();
-
   // Execute any actions
   switch(type) {
     case PRITRIG:
@@ -279,7 +277,7 @@ void timedEvent::run(decodingTest* currentDecodingTest) {
     // Calculate expected tooth times, tooth one times and revolution count
     if (tooth->angle == 0 && testLastToothTime > 0) { // If this is the first tooth ever, don't count it as the decoder will not have been able to identify it
       testToothOneMinusOneTime = testToothOneTime;
-      testToothOneTime = triggeredAt;
+      testToothOneTime = time;
 
       if (testToothOneMinusOneTime > 0) {
         testRevolutionCount++;
@@ -287,7 +285,7 @@ void timedEvent::run(decodingTest* currentDecodingTest) {
     }
     
     testLastToothMinusOneTime = testLastToothTime;
-    testLastToothTime = triggeredAt;
+    testLastToothTime = time;
     
     // Calculate expected revolution time and RPM
     if (testToothOneMinusOneTime > 0 && testLastRPM > currentStatus.crankRPM) {
@@ -301,7 +299,7 @@ void timedEvent::run(decodingTest* currentDecodingTest) {
 
     // Calculate expected micros per degree and last tooth degrees
     if (lastPRITRIGevent != nullptr) {
-      uint32_t interval = triggeredAt - lastPRITRIGevent->triggeredAt;
+      uint32_t interval = time - lastPRITRIGevent->time;
       testLastUsPerDegree = (float)interval / (float)lastPRITRIGevent->tooth->degrees;
 
       testLastToothDegrees = lastPRITRIGevent->tooth->degrees;
@@ -391,7 +389,7 @@ void testParams::runTest(testResults* result) const {
   switch(type) {
     case CRANKANGLE_c:
       if (testLastUsPerDegree > 0 && lastPRITRIGevent != nullptr) {
-        uint32_t delay = result->retrievedAt - lastPRITRIGevent->triggeredAt;
+        uint32_t delay = result->retrievedAt - lastPRITRIGevent->time;
         expectedCalculated = lastPRITRIGevent->tooth->angle + ((float)delay / testLastUsPerDegree);
         expectedCalculated += configPage4.triggerAngle;
         while (expectedCalculated >= CRANK_ANGLE_MAX) { expectedCalculated -= CRANK_ANGLE_MAX; }
@@ -468,10 +466,10 @@ void decodingTest::showTriggerlog() {
   // Show a little log of times
   uint32_t lastTriggerTime = 0;
   for (int i = 0; i < eventCount; i++) {
-    uint32_t displayTime = events[i].triggeredAt - lastTriggerTime;
-    lastTriggerTime = events[i].triggeredAt;
+    uint32_t displayTime = events[i].time - lastTriggerTime;
+    lastTriggerTime = events[i].time;
 
-    snprintf(unityMessage, unityMessageLength, "time %lu interval %lu ", events[i].triggeredAt, displayTime);
+    snprintf(unityMessage, unityMessageLength, "time %lu interval %lu ", events[i].time, displayTime);
     UnityPrint(unityMessage);
     UNITY_PRINT_EOL();
   }
