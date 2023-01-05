@@ -1,44 +1,46 @@
 /* Decoder expected outputs
- *
- * These variables contain the sync status of the decoder.
- * currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings).
- * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested.
- * currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow).
- *
- * These variables/functions must all contain/return valid values if in sync or half-sync.
- * currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync.
- * toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger.
- * toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. //TODO should be replaced by lastGap.
- * triggerToothAngle - The angle in degrees between the last two teeth.
- * triggerToothAngleIsCorrect - Must always be true //TODO: this variable should be removed after the decoders have been updated
- * revolutionTime - The time in microseconds for a 360 crank revolution.
- * getRPM() - Returns the revolutions per minute
- * getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
- * getStallTime() - Returns the number of microseconds from the current tooth to the next at 50 rpm. //TODO: how to calculate (should stall time be updated depending on respective tooth length?)
- * isDecoderStalled() - Returns true if the decoder determines RPM is below 50 (by using the output from getStallTime()). //TODO: how to calculate
- * 
- * These variable are set and forget
- * MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. Is only used internally by the decoder until sync is gained. //TODO: how to calculate
- * 
- *                                                        Resets at stall/syncloss/syncdegrade
- * currentStatus.hasSync                                  y y y
- * BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) y y n
- * currentStatus.syncLossCounter                          y y y (increments)
- * currentStatus.startRevolutions                         y y n
- * toothLastToothTime                                     y y n
- * toothLastMinusOneToothTime                             y y n
- * triggerToothAngle                                      y y n
- * revolutionTime                                         y y n
- * MAX_STALL_TIME                                         n/a
- * triggerToothAngleIsCorrect                             y y n
- * 
- */
 
-/************ This file is separated into parts ************
- * Part 1: Preparation
- * Part 2: Running the tests
- * Part 3: Cleanup / other
- */
+These variables contain the sync status of the decoder.
+currentStatus.hasSync - True if full sync is achieved (360 or 720 degree precision depending on settings).
+BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) - True if 360 degree precision is achieved when 720 is requested.
+currentStatus.syncLossCounter - Increases by one if sync-state degrades (except if stalltime is exceeded). Is never reset (only wraps itself on overflow).
+
+These variables/functions must all contain/return valid values if in sync or half-sync.
+currentStatus.startRevolutions - Increases by one for every completed crank revolution (360 crank degrees) after gaining sync.
+toothLastToothTime - the microsecond timestamp of the last tooth of the primary? trigger.
+toothLastMinusOneToothTime - the microsecond timestamp of the tooth before the last tooth of the primary? trigger. //TODO should be replaced by lastGap.
+triggerToothAngle - The angle in degrees between the last two teeth.
+triggerToothAngleIsCorrect - Must always be true //TODO: this variable should be removed after the decoders have been updated
+revolutionTime - The time in microseconds for a 360 crank revolution.
+getRPM() - Returns the revolutions per minute
+getCrankAngle() - Returns the crankangle. Over 720 degrees if in sequential mode and in half-sync. Over 360 degrees otherwise.
+getStallTime() - Returns the number of microseconds from the current tooth to the next at 50 rpm. //TODO: how to calculate (should stall time be updated depending on respective tooth length?)
+isDecoderStalled() - Returns true if the decoder determines RPM is below 50 (by using the output from getStallTime()). //TODO: how to calculate
+ 
+These variable are set and forget
+MAX_STALL_TIME - Should be set so an actual RPM of 50 causes stall. Is only used internally by the decoder until sync is gained. //TODO: how to calculate
+ 
+                                                       Resets at stall/syncloss/syncdegrade
+currentStatus.hasSync                                  y y y
+BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC) y y n
+currentStatus.syncLossCounter                          y y y (increments)
+currentStatus.startRevolutions                         y y n
+toothLastToothTime                                     y y n
+toothLastMinusOneToothTime                             y y n
+triggerToothAngle                                      y y n
+revolutionTime                                         y y n
+MAX_STALL_TIME                                         n/a
+triggerToothAngleIsCorrect                             y y n
+
+
+*********** This file is separated into parts ************
+Part 1: Preparation
+Part 2: Running the tests
+Part 3: Cleanup / other
+
+TODO: Support secondary trigger
+
+*/
 
 #include "arduino.h"
 #include "decoders.h"
