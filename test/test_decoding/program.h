@@ -94,7 +94,6 @@ class decodingTest {
     timedEvent* const events;
     const byte eventCount;
 
-    void gatherResults();
     bool verifyEventOrder() const;
     void decodingSetup();
 

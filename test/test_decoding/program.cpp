@@ -36,9 +36,8 @@
 
 /************ This file is separated into parts ************
  * Part 1: Preparation
- * Part 2: Gathering the results
- * Part 3: Running the tests (comparing results and giving output)
- * Part 4: Cleanup / other
+ * Part 2: Running the tests
+ * Part 3: Cleanup / other
  */
 
 #include "arduino.h"
@@ -54,30 +53,35 @@
 
 // Output settings
 const bool individual_test_reports = true; // Shows each test output rather than one per event
-const bool individual_test_reports_debug = true; // Shows expected/result for each individual test
+const bool individual_test_reports_debug = true; // Shows actual and expected for each individual test
 
 // Test output variables
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
-//************ Part 1: Preparation ************
-
+// Constructor
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
 void decodingTest::execute() {
-
-
   Unity.CurrentTestName = NULL; // Don't get the previous test name on this INFO message
   UnityMessage(name, __LINE__);
 
   if ( verifyEventOrder() ) { // Part 1
     decodingSetup(); // Part 1
-    gatherResults(); // Part 2
-    resetTest(); // Part 4
+
+    // Part 2: Run tests
+    for (int i = 0; i < eventCount; i++) {
+      events[i].trigger(this);
+    }
+
+    resetTest(); // Part 3
     stallCleanup(); // Reset speeduino
   }
 }
 
+//************ Part 1: Preparation ************
+
+// Verifies that the events of the tests are in the correct order timingwise. If they are not the test fails.
 bool decodingTest::verifyEventOrder() const {
   bool result = true;
   uint32_t lastEventTime = 0;
@@ -108,6 +112,7 @@ void decodingTest::decodingSetup() {
   interrupts();
 }
 
+// Constructors for the events. Different combinations as some events don't have tests or triggers.
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time, const testGroup* const a_tests, const testTooth* const a_tooth) :
 type(a_type), time(a_time), tests(a_tests), tooth(a_tooth) { };
 
@@ -120,6 +125,7 @@ type(a_type), time(a_time), tooth(a_tooth) { };
 timedEvent::timedEvent(const timedEventType a_type, const uint32_t a_time) :
 type(a_type), time(a_time) { };
 
+// Constructor for the actual test comparisons
 testParams::testParams(const timedTestType a_type, const int32_t a_expected) : type(a_type), expected(a_expected) {};
 
 const char* const testParams::friendlyNames[] = {
@@ -139,13 +145,14 @@ const char* const testParams::friendlyNames[] = {
   [ENUMEND] = "enum end / invalid",
 };
 
+// Returns the friendly name of this test type
 const char* testParams::name() const {
   return friendlyNames[this->type];
 }
 
 //************ Part 2: Running tests ************
 
-// For keeping track of current state
+// For keeping track of current objects when passing between functions
 const testParams* timedEvent::wrapperTest;
 timedEvent* timedEvent::wrapperEvent;
 decodingTest* timedEvent::wrapperDecodingTest;
@@ -162,12 +169,6 @@ uint32_t testToothOneMinusOneTime;
 uint32_t testRevolutionTime;
 byte testRevolutionCount;
 bool testHasSyncOrHalfsync;
-
-void decodingTest::gatherResults() {
-  for (int i = 0; i < eventCount; i++) {
-    events[i].trigger(this);
-  }
-}
 
 void timedEvent::trigger(decodingTest* currentDecodingTest) {
 
@@ -260,10 +261,6 @@ void decodingTest::stallCleanup() {
   currentStatus.RPM = 0; // Extra variable which is not owned by the decoder but is used by the decoder // TODO: Make the decoder own this variable?
   decodingSetup();
 }
-
-//************ Part 3: Running the tests (comparing results and giving output) ************
-
-
 
 // This is needed because Unity tests cannot call non-static member functions or use arguments
 void timedEvent::runTestsWrapper() {
@@ -413,7 +410,7 @@ void testParams::runTest() const {
   TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, actual, name());
 }
 
-//************ Part 4: Cleanup / other ************
+//************ Part 3: Cleanup / other ************
 
 void decodingTest::resetTest() {
   // Resets the testing global variables
