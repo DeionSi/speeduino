@@ -288,28 +288,6 @@ void timedEvent::runTests() {
   }
 }
 
-bool timedEvent::hasSyncOrHalfsync() {
-  bool result = false;
-  if (tests != nullptr) {
-    for (int i = 0; i < tests->testCount; i++) {
-
-      result = tests->tests[i].hasSyncOrHalfsync();
-      if (result == true) { break; }
-      
-    }
-  }
-  return result;
-}
-
-bool testParams::hasSyncOrHalfsync() const {
-  if (type == SYNC || type == HALFSYNC) {
-    if (expected == 1) {
-      return true;
-    }
-  }
-  return false;
-}
-
 // This is needed because Unity tests cannot call non-static member functions or use arguments
 void testParams::runTestWrapper() {
   timedEvent::wrapperTest->runTest();
@@ -408,6 +386,28 @@ void testParams::runTest() const {
   }
 
   TEST_ASSERT_EQUAL_MESSAGE(expectedCalculated, actual, name());
+}
+
+bool timedEvent::hasSyncOrHalfsync() {
+  bool result = false;
+  if (tests != nullptr) {
+    for (int i = 0; i < tests->testCount; i++) {
+
+      result = tests->tests[i].hasSyncOrHalfsync();
+      if (result == true) { break; }
+      
+    }
+  }
+  return result;
+}
+
+bool testParams::hasSyncOrHalfsync() const {
+  if (type == SYNC || type == HALFSYNC) {
+    if (expected == 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 //************ Part 3: Cleanup / other ************
