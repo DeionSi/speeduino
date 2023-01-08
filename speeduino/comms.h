@@ -20,4 +20,6 @@ void serialReceive(void);
  * operation is in progress */
 void serialTransmit(void);
 
+bool syncStatusForComms(void);
+
 #endif // COMMS_H
