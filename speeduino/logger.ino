@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "logger.h"
 #include "errors.h"
+#include "maths.h"
 
 /** 
  * Returns a numbered byte-field (partial field in case of multi-byte fields) from "current status" structure in the format expected by TunerStudio
@@ -28,7 +29,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 7: statusValue = (byte)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET); break; //Coolant ADC
     case 8: statusValue = currentStatus.batCorrection; break; //Battery voltage correction (%)
     case 9: statusValue = currentStatus.battery10; break; //battery voltage
-    case 10: statusValue = currentStatus.O2; break; //O2
+    case 10: statusValue = (div100((uint16_t)configPage2.stoich * currentStatus.O2)>>1) + (configPage2.stoich>>1); break; //AFR // Equivalent to (100+lambda)*0.005*stoich
     case 11: statusValue = currentStatus.egoCorrection; break; //Exhaust gas correction (%)
     case 12: statusValue = currentStatus.iatCorrection; break; //Air temperature Correction (%)
     case 13: statusValue = currentStatus.wueCorrection; break; //Warmup enrichment (%)
@@ -39,7 +40,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 18: statusValue = highByte(currentStatus.corrections); break; //Total GammaE (%)
     case 19: statusValue = currentStatus.VE1; break; //VE 1 (%)
     case 20: statusValue = currentStatus.VE2; break; //VE 2 (%)
-    case 21: statusValue = currentStatus.afrTarget; break;
+    case 21: statusValue = (div100((uint16_t)configPage2.stoich * currentStatus.afrTarget)>>1) + (configPage2.stoich>>1); break;
     case 22: statusValue = lowByte(currentStatus.tpsDOT); break; //TPS DOT
     case 23: statusValue = highByte(currentStatus.tpsDOT); break; //TPS DOT
     case 24: statusValue = currentStatus.advance; break;
@@ -78,7 +79,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 38: statusValue = currentStatus.idleLoad; break;
     case 39: statusValue = currentStatus.testOutputs; break;
 
-    case 40: statusValue = currentStatus.O2_2; break; //O2
+    case 40: statusValue = (div100((uint16_t)configPage2.stoich * currentStatus.O2_2)>>1) + (configPage2.stoich>>1); break; //O2
     case 41: statusValue = currentStatus.baro; break; //Barometer value
 
     case 42: statusValue = lowByte(currentStatus.canin[0]); break;
