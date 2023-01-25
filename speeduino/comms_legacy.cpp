@@ -18,6 +18,7 @@ A full copy of the license may be found in the projects root directory
 #include "pages.h"
 #include "page_crc.h"
 #include "logger.h"
+#include "comms.h"
 #include "table3d_axis_io.h"
 #ifdef RTC_ENABLED
   #include "rtc_common.h"
@@ -566,7 +567,7 @@ void sendValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portNum)
     }
   }
 
-  currentStatus.spark ^= (-currentStatus.hasSync ^ currentStatus.spark) & (1U << BIT_SPARK_SYNC); //Set the sync bit of the Spark variable to match the hasSync variable
+  currentStatus.spark ^= (-syncStatusForComms() ^ currentStatus.spark) & (1U << BIT_SPARK_SYNC); //Set the sync bit of the Spark variable
 
   for(byte x=0; x<packetLength; x++)
   {
@@ -1165,4 +1166,23 @@ void testComm(void)
 {
   Serial.write(1);
   return;
+}
+
+// Returns sync-status and sets half-sync status. Only used for comms.
+bool syncStatusForComms(void) {
+  bool hasFullSync = false;
+
+  if ( configPage4.sparkMode == IGN_MODE_SEQUENTIAL || configPage2.injLayout == INJ_SEQUENTIAL ) {
+    if      ( decoderSync == DS_4STROKE_CYCLE ) { hasFullSync = true;  BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); }
+    else if ( decoderSync == DS_REVOLUTION    ) { hasFullSync = false; BIT_SET  (currentStatus.status3, BIT_STATUS3_HALFSYNC); } 
+    else                                        { hasFullSync = false; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC); }
+  }
+  else if (decoderSync > DS_NO_SYNC) {
+    hasFullSync = true; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+  }
+  else {
+    hasFullSync = false; BIT_CLEAR(currentStatus.status3, BIT_STATUS3_HALFSYNC);
+  }
+
+  return hasFullSync;
 }
