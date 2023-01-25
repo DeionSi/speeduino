@@ -300,7 +300,7 @@ static bool updatePageValues(uint8_t pageNum, uint16_t offset, const byte *buffe
     {
       setPageValue(pageNum, (offset + i), buffer[i]);
     }
-    deferEEPROMWritesUntil = micros() + EEPROM_DEFER_DELAY;
+    lastEEPROMDeferTime = micros();
     return true;
   }
 
@@ -337,7 +337,7 @@ static void generateLiveValues(uint16_t offset, uint16_t packetLength)
     currentStatus.secl = 0; 
   }
 
-  currentStatus.spark ^= (-currentStatus.hasSync ^ currentStatus.spark) & (1U << BIT_SPARK_SYNC); //Set the sync bit of the Spark variable to match the hasSync variable
+  currentStatus.spark ^= (-syncStatusForComms() ^ currentStatus.spark) & (1U << BIT_SPARK_SYNC); //Set the sync bit of the Spark variable to match the hasSync variable
 
   serialPayload[0] = SERIAL_RC_OK;
   for(byte x=0; x<packetLength; x++)
@@ -558,7 +558,7 @@ void processSerialCommand(void)
       break;
 
     case 'b': // New EEPROM burn command to only burn a single page at a time 
-      if( (micros() > deferEEPROMWritesUntil)) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
+      if( (micros() - lastEEPROMDeferTime > EEPROM_DEFER_DELAY)) { writeConfig(serialPayload[2]); } //Read the table number and perform burn. Note that byte 1 in the array is unused
       else { BIT_SET(currentStatus.status4, BIT_STATUS4_BURNPENDING); }
       
       sendReturnCodeMsg(SERIAL_RC_BURN_OK);
