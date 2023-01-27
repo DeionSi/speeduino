@@ -12,11 +12,26 @@
 #include "storage.h"
 #include "sensors.h"
 #include "updates.h"
+#include "utilities.h"
 #include EEPROM_LIB_H //This is defined in the board .h files
+
+// Converts the byte representation of AFR into the byte representation of Lambda.
+// AFR was stored as it's representative value * 10. Eg. AFR 14.7 = 147.
+// Lambda is stored at a scale of 0,005 to 1. 0 equals 0,5 (translation of 100 (100*0,005=0,5)). 255 equals 1,775.
+// Function makes sure values are rounded correctly so TunerStudios conversion matches
+byte convertAFRtoLambda_EEPROM21to22(byte afr) {
+  const byte scale = 200;
+  const byte translate = 100;
+  int16_t lambda = ( ( (uint32_t)afr * scale * 2 ) / configPage2.stoich ); // Scale from AFR to Lambda. *2 means odd numbers will not be rounded down when dividing
+  boolean roundUp = lambda & 1; // If this is an odd number the result needs to be rounded up. Same as modulus 2
+  lambda = (lambda / 2) - translate + roundUp; // Translate from AFR to Lambda. Add rounding correction
+  lambda = constrain(lambda, 0, 255); // AFR can go out of bounds of a byte in the conversion. Constrain instead of cast so we don't wrap around either way
+  return lambda;
+}
 
 void doUpdates(void)
 {
-  #define CURRENT_DATA_VERSION    21
+  #define CURRENT_DATA_VERSION    22
   //Only the latest update for small flash devices must be retained
    #ifndef SMALL_FLASH_MODE
 
@@ -700,6 +715,34 @@ void doUpdates(void)
     storeEEPROMVersion(21);
   }
   
+  if(readEEPROMVersion() == 21)
+  {
+    //2023??
+
+    // Convert AFR to Lambda in AFR Target table
+    auto table_it = afrTable.values.begin();
+    while (!table_it.at_end())
+    {
+      auto row = *table_it;
+      while (!row.at_end())
+      {
+        *row = convertAFRtoLambda_EEPROM21to22(*row);
+        ++row;
+      }
+      ++table_it;
+    }
+
+    // Convert AFR to Lambda in O2 Calibration Table
+    loadCalibration();
+    for (byte i = 0; i < _countof(o2Calibration_values); i++) {
+      o2Calibration_values[i] = convertAFRtoLambda_EEPROM21to22(o2Calibration_values[i]);
+    }
+    writeCalibrationPage(O2_CALIBRATION_PAGE);
+
+    writeAllConfig();
+    storeEEPROMVersion(22);
+  }
+
   //Final check is always for 255 and 0 (Brand new arduino)
   if( (readEEPROMVersion() == 0) || (readEEPROMVersion() == 255) )
   {
