@@ -217,7 +217,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[7] = (byte)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET); //Coolant ADC
   fullStatus[8] = currentStatus.batCorrection; //Battery voltage correction (%)
   fullStatus[9] = currentStatus.battery10; //battery voltage
-  fullStatus[10] = currentStatus.O2; //O2
+  fullStatus[10] = convertLambdaToAFR(currentStatus.O2); //O2
   fullStatus[11] = currentStatus.egoCorrection; //Exhaust gas correction (%)
   fullStatus[12] = currentStatus.iatCorrection; //Air temperature Correction (%)
   fullStatus[13] = currentStatus.wueCorrection; //Warmup enrichment (%)
@@ -226,7 +226,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[16] = currentStatus.AEamount; //acceleration enrichment (%)
   fullStatus[17] = currentStatus.corrections; //Total GammaE (%)
   fullStatus[18] = currentStatus.VE; //Current VE 1 (%)
-  fullStatus[19] = currentStatus.afrTarget;
+  fullStatus[19] = convertLambdaToAFR(currentStatus.afrTarget);
   fullStatus[20] = lowByte(currentStatus.PW1); //Pulsewidth 1 multiplied by 10 in ms. Have to convert from uS to mS.
   fullStatus[21] = highByte(currentStatus.PW1); //Pulsewidth 1 multiplied by 10 in ms. Have to convert from uS to mS.
   fullStatus[22] = (uint8_t)(currentStatus.tpsDOT / 10); //TPS DOT
@@ -256,7 +256,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[37] = currentStatus.idleLoad;
   fullStatus[38] = currentStatus.testOutputs; // testEnabled(0), testActive(1)
 
-  fullStatus[39] = currentStatus.O2_2; //O2
+  fullStatus[39] = convertLambdaToAFR(currentStatus.O2_2); //O2
   fullStatus[40] = currentStatus.baro; //Barometer value
 
   fullStatus[41] = lowByte(currentStatus.canin[0]);
