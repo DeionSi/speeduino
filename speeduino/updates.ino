@@ -726,6 +726,7 @@ void doUpdates(void)
     writeCalibrationPage(O2_CALIBRATION_PAGE);
 
     configPage10.n2o_maxAFR = convertAFRtoLambda_EEPROM21to22(configPage10.n2o_maxAFR);
+    configPage9.afrProtectDeviation = convertAFRtoLambda_EEPROM21to22(configPage9.afrProtectDeviation);
 
     writeAllConfig();
     storeEEPROMVersion(22);
