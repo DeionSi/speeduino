@@ -36,6 +36,8 @@ byte pinTranslateAnalog(byte rawPin);
 void initialiseProgrammableIO(void);
 void checkProgrammableIO(void);
 int16_t ProgrammableIOGetData(uint16_t index);
+byte convertAFRtoLambda_EEPROM21to22(const byte& afr);
+byte convertLambdaToAFR(const byte& lambda);
 
 #if !defined(UNUSED)
 #define UNUSED(x) (void)(x)

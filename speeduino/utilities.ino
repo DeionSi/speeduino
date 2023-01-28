@@ -16,6 +16,7 @@
 #include "scheduler.h"
 #include "scheduledIO.h"
 #include "speeduino.h"
+#include "maths.h"
 
 uint8_t ioDelay[sizeof(configPage13.outputPin)];
 uint8_t ioOutDelay[sizeof(configPage13.outputPin)];
@@ -281,4 +282,32 @@ int16_t ProgrammableIOGetData(uint16_t index)
   else if ( index == 239U ) { result = (int16_t)max((uint32_t)runSecsX10, (uint32_t)32768); } //STM32 used std lib
   else { result = -1; } //Index is bigger than fullStatus array
   return result;
+}
+
+/*
+Converts the byte representation of AFR into the byte representation of Lambda.
+AFR is stored as it's representative value * 10. Eg. AFR 14.7 = 147.
+Lambda is stored at a scale of 0,005 to 1. 0 equals 0,5 (translation of 100 (100*0,005=0,5)). 255 equals 1,775.
+Function makes sure values are rounded correctly so TunerStudios conversion matches.
+This function is only used during EEPROM upgrade and when writing O2 Calibration.
+*/
+byte convertAFRtoLambda_EEPROM21to22(const byte& afr) {
+  const byte scale = 200;
+  const byte translate = 100;
+  int16_t lambda = ( ( (uint32_t)afr * scale * 2 ) / configPage2.stoich ); // Scale from AFR to Lambda. *2 means odd numbers will not be rounded down when dividing
+  boolean roundUp = lambda & 1; // If this is an odd number the result needs to be rounded up. Same as modulus 2
+  lambda = (lambda / 2) - translate + roundUp; // Translate from AFR to Lambda. Add rounding correction
+  lambda = constrain(lambda, 0, 255); // AFR can go out of bounds of a byte in the conversion. Constrain instead of cast so we don't wrap around either way
+  return lambda;
+}
+
+/*
+Converts the byte representation of Lambda into the byte representation of AFR.
+AFR is stored as it's representative value * 10. Eg. AFR 14.7 = 147.
+Lambda is stored at a scale of 0,005 to 1. 0 equals 0,5 (translation of 100 (100*0,005=0,5)). 255 equals 1,775.
+Function is equivalent to (100+lambda)*0.005*stoich.
+Primarily used to provide AFR output for communications and logging.
+*/
+byte convertLambdaToAFR(const byte& lambda) {
+  return (div100((uint16_t)configPage2.stoich * lambda)>>1) + (configPage2.stoich>>1);
 }

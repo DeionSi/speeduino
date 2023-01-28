@@ -672,8 +672,8 @@ void sendValuesLegacy(void)
 
   bytestosend -= Serial.write(currentStatus.nSquirts);
   bytestosend -= Serial.write(currentStatus.engine);
-  bytestosend -= Serial.write(currentStatus.afrTarget);
-  bytestosend -= Serial.write(currentStatus.afrTarget); // send twice so afrtgt1 == afrtgt2
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.afrTarget));
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.afrTarget)); // send twice so afrtgt1 == afrtgt2
   bytestosend -= Serial.write(99); // send dummy data as we don't have wbo2_en1
   bytestosend -= Serial.write(99); // send dummy data as we don't have wbo2_en2
 
@@ -699,10 +699,10 @@ void sendValuesLegacy(void)
 
   bytestosend -= Serial.write(currentStatus.battery10>>8);
   bytestosend -= Serial.write(currentStatus.battery10);
-  bytestosend -= Serial.write(currentStatus.O2>>8);
-  bytestosend -= Serial.write(currentStatus.O2);
-  bytestosend -= Serial.write(currentStatus.O2_2>>8);
-  bytestosend -= Serial.write(currentStatus.O2_2);
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.O2)>>8);
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.O2));
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.O2_2)>>8);
+  bytestosend -= Serial.write(convertLambdaToAFR(currentStatus.O2_2));
 
   bytestosend -= Serial.write(99); // knock
   bytestosend -= Serial.write(99); // knock

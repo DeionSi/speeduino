@@ -774,17 +774,3 @@ void divideTableLoad(const void *pTable, table_type_t key, uint8_t divisor)
     ++y_it;
   }
 }
-
-// Converts the byte representation of AFR into the byte representation of Lambda.
-// AFR was stored as it's representative value * 10. Eg. AFR 14.7 = 147.
-// Lambda is stored at a scale of 0,005 to 1. 0 equals 0,5 (translation of 100 (100*0,005=0,5)). 255 equals 1,775.
-// Function makes sure values are rounded correctly so TunerStudios conversion matches
-byte convertAFRtoLambda_EEPROM21to22(byte afr) {
-  const byte scale = 200;
-  const byte translate = 100;
-  int16_t lambda = ( ( (uint32_t)afr * scale * 2 ) / configPage2.stoich ); // Scale from AFR to Lambda. *2 means odd numbers will not be rounded down when dividing
-  boolean roundUp = lambda & 1; // If this is an odd number the result needs to be rounded up. Same as modulus 2
-  lambda = (lambda / 2) - translate + roundUp; // Translate from AFR to Lambda. Add rounding correction
-  lambda = constrain(lambda, 0, 255); // AFR can go out of bounds of a byte in the conversion. Constrain instead of cast so we don't wrap around either way
-  return lambda;
-}
