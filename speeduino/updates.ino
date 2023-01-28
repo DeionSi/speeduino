@@ -727,6 +727,8 @@ void doUpdates(void)
 
     configPage10.n2o_maxAFR = convertAFRtoLambda_EEPROM21to22(configPage10.n2o_maxAFR);
     configPage9.afrProtectDeviation = convertAFRtoLambda_EEPROM21to22(configPage9.afrProtectDeviation);
+    configPage6.ego_max = convertAFRtoLambda_EEPROM21to22(configPage6.ego_max);
+    configPage6.ego_min = convertAFRtoLambda_EEPROM21to22(configPage6.ego_min);
 
     writeAllConfig();
     storeEEPROMVersion(22);
