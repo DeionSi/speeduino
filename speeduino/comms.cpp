@@ -21,6 +21,7 @@ A full copy of the license may be found in the projects root directory
 #include "comms_legacy.h"
 #include "src/FastCRC/FastCRC.h"
 #include "table3d_axis_io.h"
+#include "updates.h"
 #ifdef RTC_ENABLED
   #include "rtc_common.h"
 #endif
@@ -644,13 +645,9 @@ void processSerialCommand(void)
           //Only apply every 33nd value
           if( (totalOffset % 33) == 0 )
           {
-            
-            // Recalculate the incoming AFR (*10) to the equivalent lambda (*200-100)
-            int16_t lambdaCorrected = ( ( (uint16_t)serialPayload[x+7] * 200 ) / (uint16_t)configPage2.stoich ) - 100;
-            lambdaCorrected = constrain(lambdaCorrected, 0, 255); // Constrain instead of cast so we don't wrap around either way
 
             uint8_t targetTable_offset = min(totalOffset/33, _countof(o2Calibration_values)-1); // Safety check so we don't write outside the target table
-            ((uint8_t*)pnt_TargetTable_values)[targetTable_offset] = lambdaCorrected; //O2 table stores 8 bit values
+            ((uint8_t*)pnt_TargetTable_values)[targetTable_offset] = convertAFRtoLambda_EEPROM21to22(serialPayload[x+7]); //O2 table stores 8 bit values
             pnt_TargetTable_bins[targetTable_offset] = (totalOffset);
 
           }
