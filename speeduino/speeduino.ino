@@ -1336,11 +1336,12 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
   else if( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_BARO) { iMAP = ((unsigned int)MAP << 7) / currentStatus.baro; }
   
   if ( (configPage2.includeAFR == true) && (configPage6.egoType == EGO_TYPE_WIDE) && (currentStatus.runSecs > configPage6.ego_sdelay) ) {
-    iAFR = ((unsigned int)currentStatus.O2 << 7) / currentStatus.afrTarget;  //Include AFR (vs target) if enabled
+    // Add 100 (TunerStudio translation) to both dividend and divisor to get the correct ratio.
+    iAFR = ( ( (uint16_t)currentStatus.O2 + 100) << 7) / ( (uint16_t)currentStatus.afrTarget + 100);  //Include AFR (vs target) if enabled
   }
   if ( (configPage2.incorporateAFR == true) && (configPage2.includeAFR == false) ) {
-    // 100 = Lambda 1. Add 100 (TunerStudio translation) to both dividend and divisor to get the correct ratio.
-    iAFR = ((unsigned int)(100 + 100) << 7) / (currentStatus.afrTarget + 100);  //Incorporate stoich vs target AFR, if enabled.
+    // Add 100 (TunerStudio translation) to both dividend and divisor to get the correct ratio. Lambda 1 = 100 is the stoichiometric ratio.
+    iAFR = ( (uint16_t)(100 + 100) << 7) / ( (uint16_t)currentStatus.afrTarget + 100);  //Incorporate stoich vs target AFR, if enabled.
   }
   iCorrections = (corrections << bitShift) / 100;
   //iCorrections = divu100((corrections << bitShift));
