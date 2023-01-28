@@ -1339,7 +1339,8 @@ uint16_t PW(int REQ_FUEL, byte VE, long MAP, uint16_t corrections, int injOpen)
     iAFR = ((unsigned int)currentStatus.O2 << 7) / currentStatus.afrTarget;  //Include AFR (vs target) if enabled
   }
   if ( (configPage2.incorporateAFR == true) && (configPage2.includeAFR == false) ) {
-    iAFR = ((unsigned int)configPage2.stoich << 7) / currentStatus.afrTarget;  //Incorporate stoich vs target AFR, if enabled.
+    // 100 = Lambda 1. Add 100 (TunerStudio translation) to both dividend and divisor to get the correct ratio.
+    iAFR = ((unsigned int)(100 + 100) << 7) / (currentStatus.afrTarget + 100);  //Incorporate stoich vs target AFR, if enabled.
   }
   iCorrections = (corrections << bitShift) / 100;
   //iCorrections = divu100((corrections << bitShift));
