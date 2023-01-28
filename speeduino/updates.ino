@@ -739,6 +739,8 @@ void doUpdates(void)
     }
     writeCalibrationPage(O2_CALIBRATION_PAGE);
 
+    configPage10.n2o_maxAFR = convertAFRtoLambda_EEPROM21to22(configPage10.n2o_maxAFR);
+
     writeAllConfig();
     storeEEPROMVersion(22);
   }
