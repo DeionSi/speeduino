@@ -61,6 +61,16 @@ const bool individual_test_reports_debug = true; // Shows actual and expected fo
 const byte unityMessageLength = 100;
 char unityMessage[unityMessageLength];
 
+// Replaces spaces with underscores in a char array. Test function names can not have spaces in them.
+void replaceSpaceWithUnderscore(char * target) {
+  uint8_t length = strlen(target);
+
+  for (int i = 0; i < length; i++) {
+    if (target[i] == ' ') { target[i] = '_'; }
+  }
+
+}
+
 // Constructor
 decodingTest::decodingTest(const char* const a_name, void (*const a_decoderSetup)(), timedEvent* const a_events, const byte a_eventCount) : name(a_name), decoderSetup(a_decoderSetup), events(a_events), eventCount(a_eventCount) { }
 
@@ -132,19 +142,19 @@ testParams::testParams(const timedTestType a_type, const int32_t a_expected) : t
 
 const char* const testParams::friendlyNames[] = {
   [SYNC] = "Sync",
-  [HALFSYNC] = "Half-sync",
-  [SYNCLOSSCOUNT] = "Sync-loss count",
-  [REVCOUNT_c] = "Revolution count",
-  [REVTIME_c] = "Revolution time",
-  [TOOTHANGLECORRECT] = "Tooth angle is correct",
-  [TOOTHANGLE_c] = "Tooth angle",
-  [LASTTOOTHTIME_c] = "Last tooth time",
-  [LASTTOOTHTIMEMINUSONE_c] = "Last tooth time minus one",
+  [HALFSYNC] = "HalfSync",
+  [SYNCLOSSCOUNT] = "SyncLossCount",
+  [REVCOUNT_c] = "RevolutionCount",
+  [REVTIME_c] = "RevolutionTime",
+  [TOOTHANGLECORRECT] = "ToothAngleIsCorrect",
+  [TOOTHANGLE_c] = "ToothAngle",
+  [LASTTOOTHTIME_c] = "LastToothTime",
+  [LASTTOOTHTIMEMINUSONE_c] = "LastToothTimeMinusOne",
   [RPM] = "RPM",
-  [RPM_c] = "Calculated RPM",
-  [STALLTIME_c] = "Stall time",
-  [CRANKANGLE_c] = "Crank angle",
-  [ENUMEND] = "enum end / invalid",
+  [RPM_c] = "CalculatedRPM",
+  [STALLTIME_c] = "StallTime",
+  [CRANKANGLE_c] = "CrankAngle",
+  [ENUMEND] = "enumEndInvalid",
 };
 
 // Returns the friendly name of this test type
@@ -206,6 +216,7 @@ void timedEvent::trigger(decodingTest* currentDecodingTest) {
       wrapperEvent = this;
       wrapperDecodingTest = currentDecodingTest;
       snprintf(unityMessage, unityMessageLength, "%lu", time);
+      replaceSpaceWithUnderscore(unityMessage);
       UnityDefaultTestRun(runTestsWrapper, unityMessage, __LINE__);
     }
   }
@@ -279,7 +290,8 @@ void timedEvent::runTests() {
       if (individual_test_reports) {
         wrapperTest = &tests->tests[i];
 
-        snprintf(unityMessage, unityMessageLength, "%lu '%s'", time, tests->tests[i].name() );
+        snprintf(unityMessage, unityMessageLength, "%lu %s", time, tests->tests[i].name() );
+        replaceSpaceWithUnderscore(unityMessage);
         UnityDefaultTestRun(tests->tests[i].runTestWrapper, unityMessage, __LINE__);
       }
       else {
